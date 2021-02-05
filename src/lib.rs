@@ -1,5 +1,8 @@
-use std::ops::RangeInclusive;
+
 use crate::option_data::MemoryEditorOptions;
+use egui::{Ui, CtxRef, Window};
+use std::ops::RangeInclusive;
+
 mod option_data;
 
 /// Reads a value present at the provided address in the object `T`.
@@ -8,7 +11,7 @@ mod option_data;
 ///
 /// - `&mut T`: the object on which the read should be performed.
 /// - `usize`: The address of the read.
-type ReadFunction<T> = Box<dyn Fn(&mut T, usize) -> u8>;
+type ReadFunction<T> = Box<dyn FnMut(&mut T, usize) -> u8>;
 /// Writes the changes the user made to the `T` object.
 ///
 /// # Arguments
@@ -16,7 +19,7 @@ type ReadFunction<T> = Box<dyn Fn(&mut T, usize) -> u8>;
 /// - `&mut T`: the object whose state is to be updated.
 /// - `usize`: The address of the intended write.
 /// - `u8`: The value set by the user for the provided address.
-type WriteFunction<T> = Box<dyn Fn(&mut T, usize, u8)>;
+type WriteFunction<T> = Box<dyn FnMut(&mut T, usize, u8)>;
 
 
 pub struct MemoryEditor<T> {
@@ -33,19 +36,33 @@ pub struct MemoryEditor<T> {
     read_only: bool,
     /// A collection of options relevant for the `MemoryEditor` window.
     /// Can optionally be serialized/deserialized with `serde`
-    pub options: MemoryEditorOptions
+    pub options: MemoryEditorOptions,
 }
 
 impl<T> MemoryEditor<T> {
     pub fn new(text: impl Into<String>) -> Self {
-        MemoryEditor{
+        MemoryEditor {
             window_name: text.into(),
             read_function: None,
             write_function: None,
             address_space: (0..=usize::max_value()),
             read_only: false,
-            options: Default::default()
+            options: Default::default(),
         }
+    }
+
+    pub fn ui(&mut self, ctx: &CtxRef) {
+        assert!(self.read_function.is_some(), "The read function needs to be set before one can run the editor!");
+        assert!(self.write_function.is_some() || self.read_only, "The write function needs to be set if not in read only mode!");
+        
+        Window::new(self.window_name.clone())
+            .open(&mut self.options.is_open)
+            .scroll(true)
+            .show(ctx, |ui| {
+                ui.text_edit_singleline(&mut "Hey".to_string());
+                ui.button("Hello World");
+            });
+
     }
 
     /// Set the function used to read from the provided object `T`.
@@ -73,6 +90,5 @@ impl<T> MemoryEditor<T> {
         self.read_only = read_only;
         self
     }
-
 }
 

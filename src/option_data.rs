@@ -38,12 +38,26 @@ impl Default for DataPreviewOptions {
     }
 }
 
-#[derive(Default, Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
 pub struct MemoryEditorOptions {
+    pub is_open: bool,
     pub show_options: bool,
     pub data_preview_options: DataPreviewOptions,
     pub show_ascii_sidebar: bool,
     pub grey_out_zeros: bool,
     pub column_count: usize,
+}
+
+impl Default for MemoryEditorOptions {
+    fn default() -> Self {
+        MemoryEditorOptions {
+            is_open: true,
+            show_options: true,
+            data_preview_options: Default::default(),
+            show_ascii_sidebar: true,
+            grey_out_zeros: true,
+            column_count: 16
+        }
+    }
 }
