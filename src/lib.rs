@@ -77,70 +77,75 @@ impl<T> MemoryEditor<T> {
 
         Window::new(self.window_name.clone())
             .open(is_open)
-            .scroll(true)
+            .scroll(false)
+            .default_height(300.)
+            .resizable(true)
             .show(ctx, |ui| {
-                let clip_rect = ui.clip_rect();
-                println!("Min: {:?}", clip_rect);
-                println!("Spacing: {:?}", ui.style().spacing);
-
-                egui::Grid::new("mem_edit_grid")
-                    .striped(true)
-                    .spacing(Vec2::new(15., ui.style().spacing.item_spacing.y))
-                    .show(ui, |ui| {
-                        ui.style_mut().body_text_style = TextStyle::Monospace;
-                        ui.style_mut().spacing.item_spacing.x = 3.0;
-                        for start_address in address_space.clone().step_by(*column_count) {
-                            let rectangle = ui.add(Label::new(format!("0x{:04X}", start_address))
-                                .text_color(Color32::from_rgb(120, 0, 120))
-                                .heading()).rect;
-
-                            if clip_rect.intersects(rectangle) {
-                                for c in 0..column_count.div_ceil(&8) {
-                                    ui.columns(8, |columns| {
-                                        let start_address = start_address + 8 * c;
-                                        for (i, column) in columns.iter_mut().enumerate() {
-                                            let memory_address = (start_address + i);
-                                            if !address_space.contains(&memory_address) {
-                                                break;
-                                            }
-
-                                            let mem_val: u8 = read_function(memory, memory_address);
-                                            column.add(Label::new(format!("{:02X}", mem_val)).heading());
-                                        }
-                                    });
-                                }
-                            }
-                            ui.end_row();
-                        }
-                        // for i in (0..clip_rect.max.y as usize) {
-                        //     let start_address = i * *column_count;
-                        //     let rectangle = ui.add(Label::new(format!("0x{:04X}", start_address))
-                        //         .text_color(Color32::from_rgb(120, 0, 120))
-                        //         .heading()).rect;
-                        //     if !clip_rect.intersects(rectangle) {
-                        //         break;
-                        //     }
-                        //     println!("{:?}", rectangle);
-                        //
-                        //     for c in 0..column_count.div_ceil(&8) {
-                        //         ui.columns(8, |columns| {
-                        //             let start_address = start_address + 8 * c;
-                        //             for (i, column) in columns.iter_mut().enumerate() {
-                        //                 let memory_address = (start_address + i);
-                        //                 if !address_space.contains(&memory_address) {
-                        //                     break;
-                        //                 }
-                        //
-                        //                 let mem_val: u8 = read_function(memory, memory_address);
-                        //                 column.add(Label::new(format!("{:02X}", mem_val)).heading());
-                        //             }
-                        //         });
-                        //     }
-                        //     ui.end_row();
-                        // }
-                    });
                 ui.text_edit_singleline(&mut "Hey".to_string());
                 ui.button("Hello World");
+                egui::ScrollArea::auto_sized().show(ui, |ui| {
+
+                    let clip_rect = ui.clip_rect();
+                    println!("Min: {:?}", clip_rect);
+                    println!("Spacing: {:?}", ui.style().spacing);
+
+                    egui::Grid::new("mem_edit_grid")
+                        .striped(true)
+                        .spacing(Vec2::new(15., ui.style().spacing.item_spacing.y))
+                        .show(ui, |ui| {
+                            ui.style_mut().body_text_style = TextStyle::Monospace;
+                            ui.style_mut().spacing.item_spacing.x = 3.0;
+                            for start_address in address_space.clone().step_by(*column_count) {
+                                let rectangle = ui.add(Label::new(format!("0x{:04X}", start_address))
+                                    .text_color(Color32::from_rgb(120, 0, 120))
+                                    .heading()).rect;
+
+                                if clip_rect.intersects(rectangle) {
+                                    for c in 0..column_count.div_ceil(&8) {
+                                        ui.columns(8, |columns| {
+                                            let start_address = start_address + 8 * c;
+                                            for (i, column) in columns.iter_mut().enumerate() {
+                                                let memory_address = (start_address + i);
+                                                if !address_space.contains(&memory_address) {
+                                                    break;
+                                                }
+
+                                                let mem_val: u8 = read_function(memory, memory_address);
+                                                column.add(Label::new(format!("{:02X}", mem_val)).heading());
+                                            }
+                                        });
+                                    }
+                                }
+                                ui.end_row();
+                            }
+                            // for i in (0..clip_rect.max.y as usize) {
+                            //     let start_address = i * *column_count;
+                            //     let rectangle = ui.add(Label::new(format!("0x{:04X}", start_address))
+                            //         .text_color(Color32::from_rgb(120, 0, 120))
+                            //         .heading()).rect;
+                            //     if !clip_rect.intersects(rectangle) {
+                            //         break;
+                            //     }
+                            //     println!("{:?}", rectangle);
+                            //
+                            //     for c in 0..column_count.div_ceil(&8) {
+                            //         ui.columns(8, |columns| {
+                            //             let start_address = start_address + 8 * c;
+                            //             for (i, column) in columns.iter_mut().enumerate() {
+                            //                 let memory_address = (start_address + i);
+                            //                 if !address_space.contains(&memory_address) {
+                            //                     break;
+                            //                 }
+                            //
+                            //                 let mem_val: u8 = read_function(memory, memory_address);
+                            //                 column.add(Label::new(format!("{:02X}", mem_val)).heading());
+                            //             }
+                            //         });
+                            //     }
+                            //     ui.end_row();
+                            // }
+                        });
+                });
             });
     }
 
