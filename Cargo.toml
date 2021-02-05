@@ -12,6 +12,8 @@ serde_support = ["serde"]
 [dependencies]
 #egui = {git="https://github.com/emilk/egui/"}
 egui = "^0.8.0"
+num = "0.3.1"
+
 
 [dependencies.serde]
 version = "^1.0.123"
