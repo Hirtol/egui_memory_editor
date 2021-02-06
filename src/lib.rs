@@ -61,7 +61,7 @@ impl<T> MemoryEditor<T> {
         }
     }
 
-    pub fn ui(&mut self, ctx: &CtxRef, memory: &mut T) {
+    pub fn window_ui(&mut self, ctx: &CtxRef, memory: &mut T) {
         assert!(self.read_function.is_some(), "The read function needs to be set before one can run the editor!");
         assert!(self.write_function.is_some() || self.read_only, "The write function needs to be set if not in read only mode!");
 
@@ -94,6 +94,7 @@ impl<T> MemoryEditor<T> {
             show_ascii_sidebar,
             grey_out_zeros,
             column_count,
+            address_text_colour,
             ..
         } = options;
 
@@ -102,25 +103,23 @@ impl<T> MemoryEditor<T> {
         ui.text_edit_singleline(&mut "Hey".to_string());
         ui.button("Hello World");
 
-        egui::ScrollArea::auto_sized().show(ui, |ui| {
-            println!("Beginning Scroll: {:?}", get_current_scroll(ui));
-            let max_lines = address_space.end.div_ceil(column_count);
-            let mut list_clipper = ScrollAreaClipper::new(max_lines, get_label_line_height(ui, TextStyle::Monospace));
-            list_clipper.begin(ui);
-            let line_ranges = list_clipper.get_current_line_range(ui);
-            println!("Range: {:?}", line_ranges);
+        let max_lines = address_space.end.div_ceil(column_count);
+        let line_height = get_label_line_height(ui, TextStyle::Monospace);
+
+        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
+            println!("Range: {:?}", line_range);
             println!("Scroll: {:?}", get_current_scroll(ui));
             egui::Grid::new("mem_edit_grid")
                 .striped(true)
-                .spacing(Vec2::new(15., ui.style().spacing.item_spacing.y))
+                .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
                 .show(ui, |ui| {
                     ui.style_mut().body_text_style = TextStyle::Monospace;
                     ui.style_mut().spacing.item_spacing.x = 3.0;
 
-                    for start_row in line_ranges {
+                    for start_row in line_range {
                         let start_address = start_row * *column_count;
                         ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
-                            .text_color(Color32::from_rgb(120, 0, 120))
+                            .text_color(*address_text_colour)
                             .heading());
 
                         for c in 0..column_count.div_ceil(&8) {
@@ -140,7 +139,6 @@ impl<T> MemoryEditor<T> {
                         ui.end_row();
                     }
                 });
-            list_clipper.finish(ui);
         });
     }
 

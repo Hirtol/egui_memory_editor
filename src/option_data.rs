@@ -1,3 +1,5 @@
+use egui::Color32;
+
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
 pub enum Endianness {
@@ -47,6 +49,7 @@ pub struct MemoryEditorOptions {
     pub show_ascii_sidebar: bool,
     pub grey_out_zeros: bool,
     pub column_count: usize,
+    pub address_text_colour: Color32
 }
 
 impl Default for MemoryEditorOptions {
@@ -57,7 +60,8 @@ impl Default for MemoryEditorOptions {
             data_preview_options: Default::default(),
             show_ascii_sidebar: true,
             grey_out_zeros: true,
-            column_count: 16
+            column_count: 16,
+            address_text_colour: Color32::from_rgb(125, 0, 125)
         }
     }
 }
