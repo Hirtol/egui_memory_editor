@@ -19,7 +19,7 @@ pub enum DataFormatType {
     I32,
     I64,
     F32,
-    F64
+    F64,
 }
 
 #[derive(Copy, Clone, Debug)]
@@ -32,10 +32,10 @@ pub struct DataPreviewOptions {
 
 impl Default for DataPreviewOptions {
     fn default() -> Self {
-        DataPreviewOptions{
+        DataPreviewOptions {
             show_data_preview: false,
             selected_endianness: Endianness::Little,
-            selected_data_format: DataFormatType::U32
+            selected_data_format: DataFormatType::U32,
         }
     }
 }
@@ -49,7 +49,7 @@ pub struct MemoryEditorOptions {
     pub show_ascii_sidebar: bool,
     pub grey_out_zeros: bool,
     pub column_count: usize,
-    pub address_text_colour: Color32
+    pub address_text_colour: Color32,
 }
 
 impl Default for MemoryEditorOptions {
@@ -61,7 +61,7 @@ impl Default for MemoryEditorOptions {
             show_ascii_sidebar: true,
             grey_out_zeros: true,
             column_count: 16,
-            address_text_colour: Color32::from_rgb(125, 0, 125)
+            address_text_colour: Color32::from_rgb(125, 0, 125),
         }
     }
 }

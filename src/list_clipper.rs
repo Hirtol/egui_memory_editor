@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use egui::{Ui, Vec2, ScrollArea};
+use egui::{ScrollArea, Ui, Vec2};
 
 use crate::egui_utilities::*;
 
@@ -58,7 +58,6 @@ impl ClippedScrollArea {
     }
 }
 
-
 /// A simple utility to make it easier to only insert/draw `Ui` elements that will actually be visible in the current
 ///  `ScrollArea`.
 #[derive(Debug, Copy, Clone)]
@@ -105,7 +104,7 @@ impl ScrollAreaClipper {
     }
 
     pub fn get_current_line_range(&self, ui: &Ui) -> Range<usize> {
-        (self.display_line_start(ui)..self.display_line_end(ui))
+        self.display_line_start(ui)..self.display_line_end(ui)
     }
 
     fn display_line_start(&self, ui: &Ui) -> usize {

@@ -1,15 +1,15 @@
-use std::ops::{Range, RangeInclusive};
+use std::ops::Range;
 
 use egui::{Align, Color32, CtxRef, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window};
 use num::Integer;
 
 use crate::egui_utilities::*;
-use crate::list_clipper::ScrollAreaClipper;
+
 use crate::option_data::MemoryEditorOptions;
 
-mod option_data;
-mod list_clipper;
 mod egui_utilities;
+mod list_clipper;
+mod option_data;
 
 /// Reads a value present at the provided address in the object `T`.
 ///
@@ -48,7 +48,6 @@ pub struct MemoryEditor<T> {
     /// Can optionally be serialized/deserialized with `serde`
     pub options: MemoryEditorOptions,
 }
-
 
 impl<T> MemoryEditor<T> {
     pub fn new(text: impl Into<String>) -> Self {
@@ -100,7 +99,7 @@ impl<T> MemoryEditor<T> {
             ..
         } = options;
 
-        let mut read_function = read_function.as_mut().unwrap();
+        let read_function = read_function.as_mut().unwrap();
 
         ui.text_edit_singleline(&mut "Hey".to_string());
         ui.button("Hello World");
@@ -119,15 +118,17 @@ impl<T> MemoryEditor<T> {
 
                     for start_row in line_range {
                         let start_address = address_space.start + (start_row * *column_count);
-                        ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
-                            .text_color(*address_text_colour)
-                            .heading());
+                        ui.add(
+                            Label::new(format!("0x{:01$X}", start_address, address_characters))
+                                .text_color(*address_text_colour)
+                                .heading(),
+                        );
 
                         for c in 0..column_count.div_ceil(&8) {
                             ui.columns((*column_count - 8 * c).min(8), |columns| {
                                 let start_address = start_address + 8 * c;
                                 for (i, column) in columns.iter_mut().enumerate() {
-                                    let memory_address = (start_address + i);
+                                    let memory_address = start_address + i;
                                     if !address_space.contains(&memory_address) {
                                         break;
                                     }
@@ -174,4 +175,3 @@ impl<T> MemoryEditor<T> {
         self
     }
 }
-
