@@ -23,6 +23,9 @@ impl ClippedScrollArea {
         }
     }
 
+    /// Start using the `ClippedScrollArea`.
+    ///
+    /// The `add_contents` provides a `Ui` object, as well as a non-inclusive `Range<usize>` of the current visible lines.
     pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui, Range<usize>) -> R) -> R {
         let scroll_area = self.scroll_area.clone();
         scroll_area.show(ui, |ui| {
@@ -74,7 +77,7 @@ impl ScrollAreaClipper {
         }
     }
 
-    /// Start using the `ScrollAreaClipper`.
+    /// Start using the `ScrollAreaClipper`. Automatically call the relevant `begin()` and `finish` functions.
     ///
     /// The `add_contents` provides a `Ui` object, as well as a non-inclusive `Range<usize>` of the current visible lines.
     pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui, Range<usize>) -> R) -> R {
