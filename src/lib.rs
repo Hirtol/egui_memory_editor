@@ -1,10 +1,9 @@
 use std::ops::Range;
 
-use egui::{Align, Color32, CtxRef, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window, FontDefinitions};
+use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window};
 use num::Integer;
 
 use crate::egui_utilities::*;
-
 use crate::option_data::MemoryEditorOptions;
 
 mod egui_utilities;
@@ -89,6 +88,8 @@ impl<T> MemoryEditor<T> {
     ///
     /// Use `window_ui()` if you want to have a window with the contents instead.
     pub fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
+        self.draw_options_area(ui);
+
         let Self {
             options,
             read_function,
@@ -101,55 +102,118 @@ impl<T> MemoryEditor<T> {
             show_options,
             data_preview_options,
             show_ascii_sidebar,
-            grey_out_zeros,
+            zero_colour,
             column_count,
             address_text_colour,
             memory_editor_text_style,
             ..
         } = options;
 
-        let read_function = read_function.as_mut().unwrap();
-
-        ui.text_edit_singleline(&mut "Hey".to_string());
-        ui.button("Hello World");
+        ui.separator();
 
         // Memory Editor Part.
+        let zero_colour = zero_colour.unwrap_or_else(|| ui.style().visuals.text_color());
+        let read_function = read_function.as_mut().unwrap();
+
         let max_lines = address_space.len().div_ceil(column_count);
         let line_height = get_label_line_height(ui, *memory_editor_text_style);
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
-            egui::Grid::new("mem_edit_grid")
-                .striped(true)
-                .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
-                .show(ui, |ui| {
-                    ui.style_mut().body_text_style = *memory_editor_text_style;
-                    ui.style_mut().spacing.item_spacing.x = 3.0;
+            ui.horizontal(|ui| {
+                // Memory values and addresses
+                egui::Grid::new("mem_edit_grid")
+                    .striped(true)
+                    .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
+                    .show(ui, |ui| {
+                        ui.style_mut().body_text_style = *memory_editor_text_style;
+                        ui.style_mut().spacing.item_spacing.x = 3.0;
 
-                    for start_row in line_range {
-                        let start_address = address_space.start + (start_row * *column_count);
-                        ui.add(
-                            Label::new(format!("0x{:01$X}", start_address, address_characters))
-                                .text_color(*address_text_colour),
-                        );
+                        for start_row in line_range.clone() {
+                            let start_address = address_space.start + (start_row * *column_count);
+                            ui.add(
+                                Label::new(format!("0x{:01$X}", start_address, address_characters))
+                                    .text_color(*address_text_colour),
+                            );
 
-                        for c in 0..column_count.div_ceil(&8) {
-                            ui.columns((*column_count - 8 * c).min(8), |columns| {
-                                let start_address = start_address + 8 * c;
-                                for (i, column) in columns.iter_mut().enumerate() {
-                                    let memory_address = start_address + i;
-                                    if !address_space.contains(&memory_address) {
-                                        break;
+                            // Render the memory values
+                            for c in 0..column_count.div_ceil(&8) {
+                                ui.columns((*column_count - 8 * c).min(8), |columns| {
+                                    let start_address = start_address + 8 * c;
+                                    for (i, column) in columns.iter_mut().enumerate() {
+                                        let memory_address = start_address + i;
+
+                                        if !address_space.contains(&memory_address) {
+                                            break;
+                                        }
+
+                                        let mem_val: u8 = read_function(memory, memory_address);
+
+                                        let text_colour = if mem_val == 0 {
+                                            zero_colour
+                                        } else {
+                                            column.style().visuals.text_color()
+                                        };
+
+                                        column.add(Label::new(format!("{:02X}", mem_val)).text_color(text_colour));
                                     }
+                                });
+                            }
 
-                                    let mem_val: u8 = read_function(memory, memory_address);
-                                    column.add(Label::new(format!("{:02X}", mem_val)));
-                                }
-                            });
+                            // Optional ASCII side
+                            if *show_ascii_sidebar {
+                                // Not pretty atm, needs a better method: TODO
+                                ui.add(egui::Separator::new().vertical());
+                                ui.columns(*column_count, |columns| {
+                                    for (i, column) in columns.iter_mut().enumerate() {
+                                        let memory_address = start_address + i;
+                                        if !address_space.contains(&memory_address) {
+                                            break;
+                                        }
+
+                                        let mem_val: u8 = read_function(memory, memory_address);
+                                        let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
+                                        column.add(egui::Label::new(character));
+                                    }
+                                });
+                            }
+
+                            ui.end_row();
                         }
-                        ui.end_row();
-                    }
-                });
+                    });
+            });
+            ui.set_width(ui.min_rect().width());
         });
+        ui.set_width(ui.min_rect().width());
+    }
+
+    fn draw_options_area(&mut self, ui: &mut Ui) {
+        let Self {
+            options,
+            read_function,
+            address_space,
+            address_characters,
+            ..
+        } = self;
+
+        let MemoryEditorOptions {
+            show_options,
+            data_preview_options,
+            show_ascii_sidebar,
+            zero_colour,
+            column_count,
+            address_text_colour,
+            memory_editor_text_style,
+            ..
+        } = options;
+
+        ui.text_edit_singleline(&mut "Hey".to_string());
+        ui.button("Hello World");
+
+        let mut columns = *column_count as u8;
+        ui.add(egui::DragValue::u8(&mut columns).range(1.0..=64.0).prefix("Columns: ").speed(0.5));
+        *column_count = columns as usize;
+
+        ui.checkbox(show_ascii_sidebar, "Show ASCII");
     }
 
     /// Set the function used to read from the provided object `T`.

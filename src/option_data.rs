@@ -50,7 +50,8 @@ pub struct MemoryEditorOptions {
     pub show_options: bool,
     pub data_preview_options: DataPreviewOptions,
     pub show_ascii_sidebar: bool,
-    pub grey_out_zeros: bool,
+    /// A custom colour for `0`. By default will be gray, set to `None` to have it be the same text colour as the rest.
+    pub zero_colour: Option<Color32>,
     pub column_count: usize,
     pub address_text_colour: Color32,
     pub memory_editor_text_style: TextStyle,
@@ -63,7 +64,7 @@ impl Default for MemoryEditorOptions {
             show_options: true,
             data_preview_options: Default::default(),
             show_ascii_sidebar: true,
-            grey_out_zeros: true,
+            zero_colour: Some(Color32::from_gray(80)),
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
             memory_editor_text_style: TextStyle::Monospace
