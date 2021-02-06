@@ -3,9 +3,13 @@ use std::ops::{Range, RangeInclusive};
 use egui::{Align, Color32, CtxRef, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window};
 use num::Integer;
 
+use crate::egui_utilities::*;
+use crate::list_clipper::ScrollAreaClipper;
 use crate::option_data::MemoryEditorOptions;
 
 mod option_data;
+mod list_clipper;
+mod egui_utilities;
 
 /// Reads a value present at the provided address in the object `T`.
 ///
@@ -22,7 +26,6 @@ type ReadFunction<T> = Box<dyn FnMut(&mut T, usize) -> u8>;
 /// - `usize`: The address of the intended write.
 /// - `u8`: The value set by the user for the provided address.
 type WriteFunction<T> = Box<dyn FnMut(&mut T, usize, u8)>;
-
 
 pub struct MemoryEditor<T> {
     /// The name of the `egui` window, can be left blank.
@@ -44,63 +47,15 @@ pub struct MemoryEditor<T> {
     pub options: MemoryEditorOptions,
 }
 
-struct ListClipper {
-    theoretical_max_height: f64,
-    max_lines: usize,
-    line_height: f32,
-}
-
-impl ListClipper {
-    pub fn new(max_lines: usize, line_height: f32) -> Self {
-        Self {
-            theoretical_max_height: max_lines as f64 * line_height as f64,
-            max_lines,
-            line_height,
-        }
-    }
-
-    /// Move the cursor of the provided `Ui` to the first line, ready to start drawing.
-    pub fn begin(&self, ui: &mut Ui) {
-        let start = self.display_start_f32(ui);
-        ui.allocate_space(Vec2::new(0.0, start.min(self.theoretical_max_height as f32)));
-    }
-
-    /// Pad out the remaining space until the `max_lines` to ensure a consistent scroller length.
-    pub fn finish(&self, ui: &mut Ui) {
-        let scroll_y = get_current_scroll(ui).0 + ui.clip_rect().max.y;
-        // Always leave a little extra white space on the bottom to ensure the last line is visible.
-        ui.allocate_space(Vec2::new(0.0, (self.theoretical_max_height as f32 - scroll_y).max(5.0)));
-    }
-
-    pub fn display_line_start(&self, ui: &Ui) -> usize {
-        (self.display_start_f32(ui) / self.line_height) as usize
-    }
-
-    pub fn display_line_end(&self, ui: &Ui) -> usize {
-        let start = self.display_line_start(ui);
-        let clip_lines = (ui.clip_rect().max.y / self.line_height) as usize;
-        (start + clip_lines).min(self.max_lines)
-    }
-
-    pub fn get_line_range(&self, ui: &Ui) -> Range<usize> {
-        (self.display_line_start(ui)..self.display_line_end(ui))
-    }
-
-    fn display_start_f32(&self, ui: &Ui) -> f32 {
-        let (scroll_y, _) = get_current_scroll(ui);
-        scroll_y
-    }
-}
 
 impl<T> MemoryEditor<T> {
     pub fn new(text: impl Into<String>) -> Self {
-        let address_characters = format!("{:X}", usize::max_value()).chars().count();
         MemoryEditor {
             window_name: text.into(),
             read_function: None,
             write_function: None,
-            address_space: (0..usize::max_value()),
-            address_characters,
+            address_space: (0..u16::MAX as usize),
+            address_characters: 4,
             read_only: false,
             options: Default::default(),
         }
@@ -150,10 +105,9 @@ impl<T> MemoryEditor<T> {
         egui::ScrollArea::auto_sized().show(ui, |ui| {
             println!("Beginning Scroll: {:?}", get_current_scroll(ui));
             let max_lines = address_space.end.div_ceil(column_count);
-            let mut list_clipper = ListClipper::new(max_lines, get_label_line_height(ui, TextStyle::Monospace));
-            println!("Display Start f64: {}", list_clipper.display_start_f32(ui));
+            let mut list_clipper = ScrollAreaClipper::new(max_lines, get_label_line_height(ui, TextStyle::Monospace));
             list_clipper.begin(ui);
-            let line_ranges = list_clipper.get_line_range(ui);
+            let line_ranges = list_clipper.get_current_line_range(ui);
             println!("Range: {:?}", line_ranges);
             println!("Scroll: {:?}", get_current_scroll(ui));
             egui::Grid::new("mem_edit_grid")
@@ -170,7 +124,7 @@ impl<T> MemoryEditor<T> {
                             .heading());
 
                         for c in 0..column_count.div_ceil(&8) {
-                            ui.columns(*column_count - 8 * c, |columns| {
+                            ui.columns((*column_count - 8 * c).min(8), |columns| {
                                 let start_address = start_address + 8 * c;
                                 for (i, column) in columns.iter_mut().enumerate() {
                                     let memory_address = (start_address + i);
@@ -214,24 +168,11 @@ impl<T> MemoryEditor<T> {
         self
     }
 
+    /// If set to `true` the UI will not allow any manual memory edits, and thus the `write_function` will never be called
+    /// (and therefore doesn't need to be set).
     pub fn set_read_only(mut self, read_only: bool) -> Self {
         self.read_only = read_only;
         self
     }
-}
-
-/// Returns the `(current_scroll, max_scroll)` of the current UI (assuming it is within a `ScrollArea`).
-/// Taken from the `egui` scrolling demo.
-pub fn get_current_scroll(ui: &Ui) -> (f32, f32) {
-    let margin = ui.style().visuals.clip_rect_margin;
-    (
-        ui.clip_rect().top() - ui.min_rect().top() + margin,
-        ui.min_rect().height() - ui.clip_rect().height() + 2.0 * margin,
-    )
-}
-
-/// Return the line height for the current provided `ui`
-pub fn get_label_line_height(ui: &Ui, style: TextStyle) -> f32 {
-    Label::new("##invisible").text_style(style).layout(ui).size.y + ui.style().spacing.item_spacing.y
 }
 
