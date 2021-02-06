@@ -62,43 +62,28 @@ impl ListClipper {
     /// Move the cursor of the provided `Ui` to the first line, ready to start drawing.
     pub fn begin(&self, ui: &mut Ui) {
         let start = self.display_start_f32(ui);
-        egui::Grid::new("test_grid").show(ui, |ui| {
-            for _ in 0..self.display_line_start(ui) {
-                ui.label("test");
-                ui.end_row();
-            }
-        })
-
-        // ui.painter().rect(Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(0.0, start)),
-        //                   0.0,
-        //                   Color32::from_black_alpha(0),
-        //                   egui::Stroke::none())
-        // ui.with_layout(Layout::bottom_up(Align::left()), |ui| {
-        //     ui.advance_cursor(start);
-        //     ui.label("hey");
-        // });
+        ui.allocate_space(Vec2::new(0.0, start.min(self.theoretical_max_height as f32)));
     }
 
-    /// Pad out the remaining space until the `max_lines` to ensure a consistent list length.
+    /// Pad out the remaining space until the `max_lines` to ensure a consistent scroller length.
     pub fn finish(&self, ui: &mut Ui) {
         let scroll_y = get_current_scroll(ui).0 + ui.clip_rect().max.y;
-        let filler_rect = Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(0.0, self.theoretical_max_height as f32 - scroll_y - ui.clip_rect().max.y));
-        ui.expand_to_include_rect(filler_rect);
+        // Always leave a little extra white space on the bottom to ensure the last line is visible.
+        ui.allocate_space(Vec2::new(0.0, (self.theoretical_max_height as f32 - scroll_y).max(5.0)));
     }
 
     pub fn display_line_start(&self, ui: &Ui) -> usize {
-        println!("Display Start f64: {}", self.display_start_f32(ui));
         (self.display_start_f32(ui) / self.line_height) as usize
     }
 
     pub fn display_line_end(&self, ui: &Ui) -> usize {
         let start = self.display_line_start(ui);
         let clip_lines = (ui.clip_rect().max.y / self.line_height) as usize;
-        start + clip_lines
+        (start + clip_lines).min(self.max_lines)
     }
 
-    pub fn get_line_range(&self, ui: &Ui) -> RangeInclusive<usize> {
-        (self.display_line_start(ui)..=self.display_line_end(ui))
+    pub fn get_line_range(&self, ui: &Ui) -> Range<usize> {
+        (self.display_line_start(ui)..self.display_line_end(ui))
     }
 
     fn display_start_f32(&self, ui: &Ui) -> f32 {
@@ -125,6 +110,21 @@ impl<T> MemoryEditor<T> {
         assert!(self.read_function.is_some(), "The read function needs to be set before one can run the editor!");
         assert!(self.write_function.is_some() || self.read_only, "The write function needs to be set if not in read only mode!");
 
+        let mut is_open = self.options.is_open;
+
+        Window::new(self.window_name.clone())
+            .open(&mut is_open)
+            .scroll(false)
+            .default_height(300.)
+            .resizable(true)
+            .show(ctx, |ui| {
+                self.draw_viewer_contents(ui, memory);
+            });
+
+        self.options.is_open = is_open;
+    }
+
+    fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
         let Self {
             options,
             read_function,
@@ -134,100 +134,60 @@ impl<T> MemoryEditor<T> {
         } = self;
 
         let MemoryEditorOptions {
-            is_open,
             show_options,
             data_preview_options,
             show_ascii_sidebar,
             grey_out_zeros,
-            column_count
+            column_count,
+            ..
         } = options;
 
         let mut read_function = read_function.as_mut().unwrap();
 
-        Window::new(self.window_name.clone())
-            .open(is_open)
-            .scroll(false)
-            .default_height(300.)
-            .resizable(true)
-            .show(ctx, |ui| {
-                ui.text_edit_singleline(&mut "Hey".to_string());
-                ui.button("Hello World");
-                egui::ScrollArea::auto_sized().show(ui, |ui| {
-                    println!("{:?}", get_current_scroll(ui));
+        ui.text_edit_singleline(&mut "Hey".to_string());
+        ui.button("Hello World");
+
+        egui::ScrollArea::auto_sized().show(ui, |ui| {
+            println!("Beginning Scroll: {:?}", get_current_scroll(ui));
+            let max_lines = address_space.end.div_ceil(column_count);
+            let mut list_clipper = ListClipper::new(max_lines, get_label_line_height(ui, TextStyle::Monospace));
+            println!("Display Start f64: {}", list_clipper.display_start_f32(ui));
+            list_clipper.begin(ui);
+            let line_ranges = list_clipper.get_line_range(ui);
+            println!("Range: {:?}", line_ranges);
+            println!("Scroll: {:?}", get_current_scroll(ui));
+            egui::Grid::new("mem_edit_grid")
+                .striped(true)
+                .spacing(Vec2::new(15., ui.style().spacing.item_spacing.y))
+                .show(ui, |ui| {
                     ui.style_mut().body_text_style = TextStyle::Monospace;
-                    let max_lines = address_space.end.div_ceil(column_count);
-                    let mut list_clipper = ListClipper::new(max_lines, get_line_height(ui));
-                    //list_clipper.begin(ui);
+                    ui.style_mut().spacing.item_spacing.x = 3.0;
 
-                    egui::Grid::new("mem_edit_grid")
-                        .striped(true)
-                        .spacing(Vec2::new(15., ui.style().spacing.item_spacing.y))
-                        .show(ui, |ui| {
-                            ui.style_mut().body_text_style = TextStyle::Monospace;
-                            ui.style_mut().spacing.item_spacing.x = 3.0;
+                    for start_row in line_ranges {
+                        let start_address = start_row * *column_count;
+                        ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
+                            .text_color(Color32::from_rgb(120, 0, 120))
+                            .heading());
 
-                            for i in 0..list_clipper.display_line_start(ui) {
-                                ui.label("0xFF");
-                                ui.end_row();
-                            }
+                        for c in 0..column_count.div_ceil(&8) {
+                            ui.columns(*column_count - 8 * c, |columns| {
+                                let start_address = start_address + 8 * c;
+                                for (i, column) in columns.iter_mut().enumerate() {
+                                    let memory_address = (start_address + i);
+                                    if !address_space.contains(&memory_address) {
+                                        break;
+                                    }
 
-                            println!("Start: {} - End: {}", list_clipper.display_line_start(ui), list_clipper.display_line_end(ui));
-
-                            // let mut label_rect = ui.label("Hello World!").rect;
-                            // label_rect.set_height(line_height * (address_space.end / *column_count) as f32);
-                            // ui.expand_to_include_rect(label_rect);
-                            println!("{:?}", get_current_scroll(ui));
-
-                            for start_row in list_clipper.get_line_range(ui) {
-                                let start_address = start_row * *column_count;
-                                ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
-                                    .text_color(Color32::from_rgb(120, 0, 120))
-                                    .heading());
-
-                                for c in 0..column_count.div_ceil(&8) {
-                                    ui.columns(8, |columns| {
-                                        let start_address = start_address + 8 * c;
-                                        for (i, column) in columns.iter_mut().enumerate() {
-                                            let memory_address = (start_address + i);
-                                            if !address_space.contains(&memory_address) {
-                                                break;
-                                            }
-
-                                            let mem_val: u8 = read_function(memory, memory_address);
-                                            column.add(Label::new(format!("{:02X}", mem_val)).heading());
-                                        }
-                                    });
+                                    let mem_val: u8 = read_function(memory, memory_address);
+                                    column.add(Label::new(format!("{:02X}", mem_val)).heading());
                                 }
-                                ui.end_row();
-                            }
-
-                            // for start_address in address_space.clone().step_by(*column_count) {
-                            //     let rectangle = ui.add(Label::new(format!("0x{:04X}", start_address))
-                            //         .text_color(Color32::from_rgb(120, 0, 120))
-                            //         .heading()).rect;
-                            //
-                            //     if clip_rect.intersects(rectangle) {
-                            //         for c in 0..column_count.div_ceil(&8) {
-                            //             ui.columns(8, |columns| {
-                            //                 let start_address = start_address + 8 * c;
-                            //                 for (i, column) in columns.iter_mut().enumerate() {
-                            //                     let memory_address = (start_address + i);
-                            //                     if !address_space.contains(&memory_address) {
-                            //                         break;
-                            //                     }
-                            //
-                            //                     let mem_val: u8 = read_function(memory, memory_address);
-                            //                     column.add(Label::new(format!("{:02X}", mem_val)).heading());
-                            //                 }
-                            //             });
-                            //         }
-                            //     }
-                            //     ui.end_row();
-                            // }
-                        });
-                    list_clipper.finish(ui);
+                            });
+                        }
+                        ui.end_row();
+                    }
                 });
-            });
+            list_clipper.finish(ui);
+        });
     }
 
     /// Set the function used to read from the provided object `T`.
@@ -246,6 +206,7 @@ impl<T> MemoryEditor<T> {
         self
     }
 
+    /// Set the range of addresses that the UI will display, and subsequently query for using the `read_function`
     pub fn set_address_space(mut self, address_range: Range<usize>) -> Self {
         self.address_space = address_range;
         // This is incredibly janky, but I couldn't find a better way atm. If there is one, please mention it!
@@ -260,6 +221,7 @@ impl<T> MemoryEditor<T> {
 }
 
 /// Returns the `(current_scroll, max_scroll)` of the current UI (assuming it is within a `ScrollArea`).
+/// Taken from the `egui` scrolling demo.
 pub fn get_current_scroll(ui: &Ui) -> (f32, f32) {
     let margin = ui.style().visuals.clip_rect_margin;
     (
@@ -269,7 +231,7 @@ pub fn get_current_scroll(ui: &Ui) -> (f32, f32) {
 }
 
 /// Return the line height for the current provided `ui`
-pub fn get_line_height(ui: &Ui) -> f32 {
-    Label::new("##invisible").heading().layout(ui).size.y + ui.style().spacing.item_spacing.y
+pub fn get_label_line_height(ui: &Ui, style: TextStyle) -> f32 {
+    Label::new("##invisible").text_style(style).layout(ui).size.y + ui.style().spacing.item_spacing.y
 }
 
