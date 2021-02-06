@@ -1,6 +1,6 @@
-use std::ops::{RangeInclusive, Range};
+use std::ops::{Range, RangeInclusive};
 
-use egui::{Color32, CtxRef, Label, Layout, TextStyle, Ui, Vec2, Window};
+use egui::{Align, Color32, CtxRef, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window};
 use num::Integer;
 
 use crate::option_data::MemoryEditorOptions;
@@ -33,6 +33,9 @@ pub struct MemoryEditor<T> {
     write_function: Option<WriteFunction<T>>,
     /// The range of possible values to be displayed, the GUI will start at the lower bound and go up to the upper bound.
     address_space: Range<usize>,
+    /// The amount of characters used to indicate the current address in the sidebar of the UI.
+    /// Is derived from the provided `address_space.end`
+    address_characters: usize,
     /// When `true` will disallow any edits, ensuring the `write_function` will never be called.
     /// The latter therefore doesn't need to be set.
     read_only: bool,
@@ -41,13 +44,78 @@ pub struct MemoryEditor<T> {
     pub options: MemoryEditorOptions,
 }
 
+struct ListClipper {
+    theoretical_max_height: f64,
+    max_lines: usize,
+    line_height: f32,
+}
+
+impl ListClipper {
+    pub fn new(max_lines: usize, line_height: f32) -> Self {
+        Self {
+            theoretical_max_height: max_lines as f64 * line_height as f64,
+            max_lines,
+            line_height,
+        }
+    }
+
+    /// Move the cursor of the provided `Ui` to the first line, ready to start drawing.
+    pub fn begin(&self, ui: &mut Ui) {
+        let start = self.display_start_f32(ui);
+        egui::Grid::new("test_grid").show(ui, |ui| {
+            for _ in 0..self.display_line_start(ui) {
+                ui.label("test");
+                ui.end_row();
+            }
+        })
+
+        // ui.painter().rect(Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(0.0, start)),
+        //                   0.0,
+        //                   Color32::from_black_alpha(0),
+        //                   egui::Stroke::none())
+        // ui.with_layout(Layout::bottom_up(Align::left()), |ui| {
+        //     ui.advance_cursor(start);
+        //     ui.label("hey");
+        // });
+    }
+
+    /// Pad out the remaining space until the `max_lines` to ensure a consistent list length.
+    pub fn finish(&self, ui: &mut Ui) {
+        let scroll_y = get_current_scroll(ui).0 + ui.clip_rect().max.y;
+        let filler_rect = Rect::from_min_max(Pos2::new(0.0, 0.0), Pos2::new(0.0, self.theoretical_max_height as f32 - scroll_y - ui.clip_rect().max.y));
+        ui.expand_to_include_rect(filler_rect);
+    }
+
+    pub fn display_line_start(&self, ui: &Ui) -> usize {
+        println!("Display Start f64: {}", self.display_start_f32(ui));
+        (self.display_start_f32(ui) / self.line_height) as usize
+    }
+
+    pub fn display_line_end(&self, ui: &Ui) -> usize {
+        let start = self.display_line_start(ui);
+        let clip_lines = (ui.clip_rect().max.y / self.line_height) as usize;
+        start + clip_lines
+    }
+
+    pub fn get_line_range(&self, ui: &Ui) -> RangeInclusive<usize> {
+        (self.display_line_start(ui)..=self.display_line_end(ui))
+    }
+
+    fn display_start_f32(&self, ui: &Ui) -> f32 {
+        let (scroll_y, _) = get_current_scroll(ui);
+        scroll_y
+    }
+}
+
 impl<T> MemoryEditor<T> {
     pub fn new(text: impl Into<String>) -> Self {
+        let address_characters = format!("{:X}", usize::max_value()).chars().count();
         MemoryEditor {
             window_name: text.into(),
             read_function: None,
             write_function: None,
             address_space: (0..usize::max_value()),
+            address_characters,
             read_only: false,
             options: Default::default(),
         }
@@ -61,6 +129,7 @@ impl<T> MemoryEditor<T> {
             options,
             read_function,
             address_space,
+            address_characters,
             ..
         } = self;
 
@@ -84,10 +153,11 @@ impl<T> MemoryEditor<T> {
                 ui.text_edit_singleline(&mut "Hey".to_string());
                 ui.button("Hello World");
                 egui::ScrollArea::auto_sized().show(ui, |ui| {
-
-                    let clip_rect = ui.clip_rect();
-                    println!("Min: {:?}", clip_rect);
-                    println!("Spacing: {:?}", ui.style().spacing);
+                    println!("{:?}", get_current_scroll(ui));
+                    ui.style_mut().body_text_style = TextStyle::Monospace;
+                    let max_lines = address_space.end.div_ceil(column_count);
+                    let mut list_clipper = ListClipper::new(max_lines, get_line_height(ui));
+                    //list_clipper.begin(ui);
 
                     egui::Grid::new("mem_edit_grid")
                         .striped(true)
@@ -95,56 +165,67 @@ impl<T> MemoryEditor<T> {
                         .show(ui, |ui| {
                             ui.style_mut().body_text_style = TextStyle::Monospace;
                             ui.style_mut().spacing.item_spacing.x = 3.0;
-                            for start_address in address_space.clone().step_by(*column_count) {
-                                let rectangle = ui.add(Label::new(format!("0x{:04X}", start_address))
+
+                            for i in 0..list_clipper.display_line_start(ui) {
+                                ui.label("0xFF");
+                                ui.end_row();
+                            }
+
+                            println!("Start: {} - End: {}", list_clipper.display_line_start(ui), list_clipper.display_line_end(ui));
+
+                            // let mut label_rect = ui.label("Hello World!").rect;
+                            // label_rect.set_height(line_height * (address_space.end / *column_count) as f32);
+                            // ui.expand_to_include_rect(label_rect);
+                            println!("{:?}", get_current_scroll(ui));
+
+                            for start_row in list_clipper.get_line_range(ui) {
+                                let start_address = start_row * *column_count;
+                                ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
                                     .text_color(Color32::from_rgb(120, 0, 120))
-                                    .heading()).rect;
+                                    .heading());
 
-                                if clip_rect.intersects(rectangle) {
-                                    for c in 0..column_count.div_ceil(&8) {
-                                        ui.columns(8, |columns| {
-                                            let start_address = start_address + 8 * c;
-                                            for (i, column) in columns.iter_mut().enumerate() {
-                                                let memory_address = (start_address + i);
-                                                if !address_space.contains(&memory_address) {
-                                                    break;
-                                                }
-
-                                                let mem_val: u8 = read_function(memory, memory_address);
-                                                column.add(Label::new(format!("{:02X}", mem_val)).heading());
+                                for c in 0..column_count.div_ceil(&8) {
+                                    ui.columns(8, |columns| {
+                                        let start_address = start_address + 8 * c;
+                                        for (i, column) in columns.iter_mut().enumerate() {
+                                            let memory_address = (start_address + i);
+                                            if !address_space.contains(&memory_address) {
+                                                break;
                                             }
-                                        });
-                                    }
+
+                                            let mem_val: u8 = read_function(memory, memory_address);
+                                            column.add(Label::new(format!("{:02X}", mem_val)).heading());
+                                        }
+                                    });
                                 }
                                 ui.end_row();
                             }
-                            // for i in (0..clip_rect.max.y as usize) {
-                            //     let start_address = i * *column_count;
+
+                            // for start_address in address_space.clone().step_by(*column_count) {
                             //     let rectangle = ui.add(Label::new(format!("0x{:04X}", start_address))
                             //         .text_color(Color32::from_rgb(120, 0, 120))
                             //         .heading()).rect;
-                            //     if !clip_rect.intersects(rectangle) {
-                            //         break;
-                            //     }
-                            //     println!("{:?}", rectangle);
                             //
-                            //     for c in 0..column_count.div_ceil(&8) {
-                            //         ui.columns(8, |columns| {
-                            //             let start_address = start_address + 8 * c;
-                            //             for (i, column) in columns.iter_mut().enumerate() {
-                            //                 let memory_address = (start_address + i);
-                            //                 if !address_space.contains(&memory_address) {
-                            //                     break;
+                            //     if clip_rect.intersects(rectangle) {
+                            //         for c in 0..column_count.div_ceil(&8) {
+                            //             ui.columns(8, |columns| {
+                            //                 let start_address = start_address + 8 * c;
+                            //                 for (i, column) in columns.iter_mut().enumerate() {
+                            //                     let memory_address = (start_address + i);
+                            //                     if !address_space.contains(&memory_address) {
+                            //                         break;
+                            //                     }
+                            //
+                            //                     let mem_val: u8 = read_function(memory, memory_address);
+                            //                     column.add(Label::new(format!("{:02X}", mem_val)).heading());
                             //                 }
-                            //
-                            //                 let mem_val: u8 = read_function(memory, memory_address);
-                            //                 column.add(Label::new(format!("{:02X}", mem_val)).heading());
-                            //             }
-                            //         });
+                            //             });
+                            //         }
                             //     }
                             //     ui.end_row();
                             // }
                         });
+                    list_clipper.finish(ui);
                 });
             });
     }
@@ -167,6 +248,8 @@ impl<T> MemoryEditor<T> {
 
     pub fn set_address_space(mut self, address_range: Range<usize>) -> Self {
         self.address_space = address_range;
+        // This is incredibly janky, but I couldn't find a better way atm. If there is one, please mention it!
+        self.address_characters = format!("{:X}", self.address_space.end).chars().count();
         self
     }
 
@@ -174,5 +257,19 @@ impl<T> MemoryEditor<T> {
         self.read_only = read_only;
         self
     }
+}
+
+/// Returns the `(current_scroll, max_scroll)` of the current UI (assuming it is within a `ScrollArea`).
+pub fn get_current_scroll(ui: &Ui) -> (f32, f32) {
+    let margin = ui.style().visuals.clip_rect_margin;
+    (
+        ui.clip_rect().top() - ui.min_rect().top() + margin,
+        ui.min_rect().height() - ui.clip_rect().height() + 2.0 * margin,
+    )
+}
+
+/// Return the line height for the current provided `ui`
+pub fn get_line_height(ui: &Ui) -> f32 {
+    Label::new("##invisible").heading().layout(ui).size.y + ui.style().spacing.item_spacing.y
 }
 
