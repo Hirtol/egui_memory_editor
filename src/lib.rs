@@ -35,6 +35,8 @@ pub struct MemoryEditor<T> {
     /// The function used when attempts are made to change values within the GUI.
     write_function: Option<WriteFunction<T>>,
     /// The range of possible values to be displayed, the GUI will start at the lower bound and go up to the upper bound.
+    ///
+    /// Note this *currently* only supports a range that has a max of `2^24`, due to `ScrollArea` limitations.
     address_space: Range<usize>,
     /// The amount of characters used to indicate the current address in the sidebar of the UI.
     /// Is derived from the provided `address_space.end`
@@ -102,8 +104,7 @@ impl<T> MemoryEditor<T> {
 
         ui.text_edit_singleline(&mut "Hey".to_string());
         ui.button("Hello World");
-
-        let max_lines = address_space.end.div_ceil(column_count);
+        let max_lines = address_space.len().div_ceil(column_count);
         let line_height = get_label_line_height(ui, TextStyle::Monospace);
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
@@ -117,7 +118,7 @@ impl<T> MemoryEditor<T> {
                     ui.style_mut().spacing.item_spacing.x = 3.0;
 
                     for start_row in line_range {
-                        let start_address = start_row * *column_count;
+                        let start_address = start_row * *column_count + address_space.start;
                         ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
                             .text_color(*address_text_colour)
                             .heading());
