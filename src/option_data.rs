@@ -1,14 +1,14 @@
 use egui::Color32;
 
 #[derive(Copy, Clone, Debug)]
-#[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub enum Endianness {
     Big,
     Little,
 }
 
 #[derive(Copy, Clone, Debug)]
-#[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub enum DataFormatType {
     U8,
     U16,
@@ -23,7 +23,7 @@ pub enum DataFormatType {
 }
 
 #[derive(Copy, Clone, Debug)]
-#[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct DataPreviewOptions {
     pub show_data_preview: bool,
     pub selected_endianness: Endianness,
@@ -41,7 +41,7 @@ impl Default for DataPreviewOptions {
 }
 
 #[derive(Copy, Clone, Debug)]
-#[cfg_attr(feature = "serde_support", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub struct MemoryEditorOptions {
     pub is_open: bool,
     pub show_options: bool,

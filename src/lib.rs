@@ -118,7 +118,7 @@ impl<T> MemoryEditor<T> {
                     ui.style_mut().spacing.item_spacing.x = 3.0;
 
                     for start_row in line_range {
-                        let start_address = start_row * *column_count + address_space.start;
+                        let start_address = address_space.start + (start_row * *column_count);
                         ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
                             .text_color(*address_text_colour)
                             .heading());
