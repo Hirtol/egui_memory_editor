@@ -28,11 +28,7 @@ impl ClippedScrollArea {
     /// The `add_contents` provides a `Ui` object, as well as a non-inclusive `Range<usize>` of the current visible lines.
     pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui, Range<usize>) -> R) -> R {
         let scroll_area = self.scroll_area.clone();
-        scroll_area.show(ui, |ui| {
-            self.clipper.show(ui, |ui, range| {
-                add_contents(ui, range)
-            })
-        })
+        scroll_area.show(ui, |ui| self.clipper.show(ui, add_contents))
     }
 
     /// If `false` (default), the scroll bar will be hidden when not needed/
