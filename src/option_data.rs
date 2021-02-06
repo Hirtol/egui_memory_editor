@@ -1,4 +1,4 @@
-use egui::Color32;
+use egui::{Color32, TextStyle};
 
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
@@ -24,6 +24,7 @@ pub enum DataFormatType {
 
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "persistence", serde(default))]
 pub struct DataPreviewOptions {
     pub show_data_preview: bool,
     pub selected_endianness: Endianness,
@@ -42,7 +43,9 @@ impl Default for DataPreviewOptions {
 
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "persistence", serde(default))]
 pub struct MemoryEditorOptions {
+    /// Used to check if the window is open, if you don't use the `window_ui()` call then this is irrelevant.
     pub is_open: bool,
     pub show_options: bool,
     pub data_preview_options: DataPreviewOptions,
@@ -50,6 +53,7 @@ pub struct MemoryEditorOptions {
     pub grey_out_zeros: bool,
     pub column_count: usize,
     pub address_text_colour: Color32,
+    pub memory_editor_text_style: TextStyle,
 }
 
 impl Default for MemoryEditorOptions {
@@ -62,6 +66,7 @@ impl Default for MemoryEditorOptions {
             grey_out_zeros: true,
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
+            memory_editor_text_style: TextStyle::Monospace
         }
     }
 }

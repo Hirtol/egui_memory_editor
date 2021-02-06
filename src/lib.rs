@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use egui::{Align, Color32, CtxRef, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window};
+use egui::{Align, Color32, CtxRef, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window, FontDefinitions};
 use num::Integer;
 
 use crate::egui_utilities::*;
@@ -9,7 +9,7 @@ use crate::option_data::MemoryEditorOptions;
 
 mod egui_utilities;
 mod list_clipper;
-mod option_data;
+pub mod option_data;
 
 /// Reads a value present at the provided address in the object `T`.
 ///
@@ -17,7 +17,7 @@ mod option_data;
 ///
 /// - `&mut T`: the object on which the read should be performed.
 /// - `usize`: The address of the read.
-type ReadFunction<T> = Box<dyn FnMut(&mut T, usize) -> u8>;
+pub type ReadFunction<T> = Box<dyn FnMut(&mut T, usize) -> u8>;
 /// Writes the changes the user made to the `T` object.
 ///
 /// # Arguments
@@ -25,7 +25,7 @@ type ReadFunction<T> = Box<dyn FnMut(&mut T, usize) -> u8>;
 /// - `&mut T`: the object whose state is to be updated.
 /// - `usize`: The address of the intended write.
 /// - `u8`: The value set by the user for the provided address.
-type WriteFunction<T> = Box<dyn FnMut(&mut T, usize, u8)>;
+pub type WriteFunction<T> = Box<dyn FnMut(&mut T, usize, u8)>;
 
 pub struct MemoryEditor<T> {
     /// The name of the `egui` window, can be left blank.
@@ -62,6 +62,9 @@ impl<T> MemoryEditor<T> {
         }
     }
 
+    /// Create a window and render the memory editor contents within.
+    ///
+    /// If you want to make your own window/container to be used for the editor contents, you can use `draw_viewer_contents()`.
     pub fn window_ui(&mut self, ctx: &CtxRef, memory: &mut T) {
         assert!(self.read_function.is_some(), "The read function needs to be set before one can run the editor!");
         assert!(self.write_function.is_some() || self.read_only, "The write function needs to be set if not in read only mode!");
@@ -80,7 +83,12 @@ impl<T> MemoryEditor<T> {
         self.options.is_open = is_open;
     }
 
-    fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
+    /// Draws the actual memory viewer/editor.
+    ///
+    /// Can be included in whatever container you want.
+    ///
+    /// Use `window_ui()` if you want to have a window with the contents instead.
+    pub fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
         let Self {
             options,
             read_function,
@@ -96,6 +104,7 @@ impl<T> MemoryEditor<T> {
             grey_out_zeros,
             column_count,
             address_text_colour,
+            memory_editor_text_style,
             ..
         } = options;
 
@@ -103,25 +112,24 @@ impl<T> MemoryEditor<T> {
 
         ui.text_edit_singleline(&mut "Hey".to_string());
         ui.button("Hello World");
+
+        // Memory Editor Part.
         let max_lines = address_space.len().div_ceil(column_count);
-        let line_height = get_label_line_height(ui, TextStyle::Monospace);
+        let line_height = get_label_line_height(ui, *memory_editor_text_style);
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
-            println!("Range: {:?}", line_range);
-            println!("Scroll: {:?}", get_current_scroll(ui));
             egui::Grid::new("mem_edit_grid")
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
                 .show(ui, |ui| {
-                    ui.style_mut().body_text_style = TextStyle::Monospace;
+                    ui.style_mut().body_text_style = *memory_editor_text_style;
                     ui.style_mut().spacing.item_spacing.x = 3.0;
 
                     for start_row in line_range {
                         let start_address = address_space.start + (start_row * *column_count);
                         ui.add(
                             Label::new(format!("0x{:01$X}", start_address, address_characters))
-                                .text_color(*address_text_colour)
-                                .heading(),
+                                .text_color(*address_text_colour),
                         );
 
                         for c in 0..column_count.div_ceil(&8) {
@@ -134,7 +142,7 @@ impl<T> MemoryEditor<T> {
                                     }
 
                                     let mem_val: u8 = read_function(memory, memory_address);
-                                    column.add(Label::new(format!("{:02X}", mem_val)).heading());
+                                    column.add(Label::new(format!("{:02X}", mem_val)));
                                 }
                             });
                         }
@@ -172,6 +180,12 @@ impl<T> MemoryEditor<T> {
     /// (and therefore doesn't need to be set).
     pub fn set_read_only(mut self, read_only: bool) -> Self {
         self.read_only = read_only;
+        self
+    }
+
+    /// Set the memory options, useful if you use the `persistence` feature.
+    pub fn with_options(mut self, options: MemoryEditorOptions) -> Self {
+        self.options = options;
         self
     }
 }
