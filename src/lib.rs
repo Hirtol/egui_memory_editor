@@ -48,16 +48,13 @@ impl<T> MemoryEditor<T> {
     /// Create the MemoryEditor, which should be kept in memory between frames.
     ///
     /// The `read_function` should return one `u8` value from the object which you provide in
-    /// either the [window_ui()][w] or the [draw_viewer_contents][d] method.
+    /// either the [`Self::window_ui`] or the [`Self::draw_viewer_contents`] method.
     ///
     /// ```
     /// # use egui_memory_viewer::MemoryEditor;
     /// let mut memory_base = vec![0xFF; 0xFF];
     /// let mut memory_editor: MemoryEditor<Vec<u8>> = MemoryEditor::new(|memory, address| memory[address]);
     /// ```
-    ///
-    /// [w]: MemoryEditor::window_ui()
-    /// [d]: MemoryEditor::draw_viewer_contents()
     pub fn new(read_function: ReadFunction<T>) -> Self {
         MemoryEditor {
             window_name: "Memory Editor".to_string(),
@@ -71,7 +68,7 @@ impl<T> MemoryEditor<T> {
 
     /// Create a window and render the memory editor contents within.
     ///
-    /// If you want to make your own window/container to be used for the editor contents, you can use `draw_viewer_contents()`.
+    /// If you want to make your own window/container to be used for the editor contents, you can use [`Self::draw_viewer_contents`].
     pub fn window_ui(&mut self, ctx: &CtxRef, memory: &mut T) {
         let mut is_open = self.options.is_open;
 
@@ -91,7 +88,7 @@ impl<T> MemoryEditor<T> {
     ///
     /// Can be included in whatever container you want.
     ///
-    /// Use `window_ui()` if you want to have a window with the contents instead.
+    /// Use [`Self::window_ui`] if you want to have a window with the contents instead.
     pub fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
         assert!(self.address_ranges.len() > 0, "At least one address range needs to be added to render the contents!");
 
