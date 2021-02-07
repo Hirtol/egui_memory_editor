@@ -119,6 +119,7 @@ impl<T> MemoryEditor<T> {
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
                 .show(ui, |ui| {
+                    ui.style_mut().wrap = Some(false);
                     ui.style_mut().spacing.item_spacing.x = 3.0;
                     for start_row in line_range.clone() {
                         let start_address = address_space.start + (start_row * column_count);
@@ -251,7 +252,7 @@ impl<T> MemoryEditor<T> {
                             }
 
                             // We automatically write the value when there is a valid u8, so discard otherwise.
-                            if response.lost_kb_focus {
+                            if response.lost_kb_focus() {
                                 frame_data.selected_address_string.clear();
                                 frame_data.selected_address = None;
                             }
@@ -264,7 +265,7 @@ impl<T> MemoryEditor<T> {
                             .text_color(text_colour)
                             .text_style(options.memory_editor_text_style),
                     );
-                    if response.clicked {
+                    if response.clicked() {
                         frame_data.selected_address = Some(memory_address);
                         frame_data.selected_address_request_focus = true;
                     }

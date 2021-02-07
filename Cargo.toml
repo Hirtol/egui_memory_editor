@@ -11,7 +11,7 @@ persistence = ["serde", "egui/persistence"]
 
 [dependencies]
 #egui = {git="https://github.com/emilk/egui/"}
-egui = "^0.8.0"
+egui = "^0.9.0"
 num = "0.3.1"
 
 
