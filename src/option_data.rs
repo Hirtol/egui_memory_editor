@@ -71,3 +71,10 @@ impl Default for MemoryEditorOptions {
         }
     }
 }
+
+/// A rather hacky struct to maintain some state between frames for layout purposes
+#[derive(Debug, Default, Copy, Clone)]
+pub(crate) struct BetweenFrameUiData {
+    /// Used to ensure we can resize the window in height, but not in width.
+    pub previous_frame_editor_width: f32,
+}
