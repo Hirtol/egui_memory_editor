@@ -1,7 +1,7 @@
 use std::collections::{BTreeMap, HashMap};
 use std::ops::Range;
 
-use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window};
+use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
 use num::Integer;
 
 use crate::egui_utilities::*;
@@ -97,7 +97,9 @@ impl<T> MemoryEditor<T> {
         let Self {
             options,
             read_function,
+            write_function,
             address_ranges,
+            read_only,
             frame_data,
             ..
         } = self;
@@ -129,7 +131,6 @@ impl<T> MemoryEditor<T> {
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
                 .show(ui, |mut ui| {
                     ui.style_mut().spacing.item_spacing.x = 3.0;
-
                     for start_row in line_range.clone() {
                         let start_address = address_space.start + (start_row * *column_count);
                         ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters)).text_color(*address_text_colour).text_style(*memory_editor_address_text_style));
@@ -147,13 +148,58 @@ impl<T> MemoryEditor<T> {
 
                                     let mem_val: u8 = read_function(memory, memory_address);
 
-                                    let text_colour = if *show_zero_colour && mem_val == 0{
+                                    let text_colour = if *show_zero_colour && mem_val == 0 {
                                         *zero_colour
                                     } else {
                                         column.style().visuals.text_color()
                                     };
 
-                                    column.add(Label::new(format!("{:02X}", mem_val)).text_color(text_colour).text_style(*memory_editor_text_style));
+                                    let mut label_text = format!("{:02X}", mem_val);
+
+                                    if let Some(address) = frame_data.selected_address {
+                                        if !*read_only && address == memory_address {
+                                            let response = column.add(TextEdit::singleline(&mut frame_data.selected_address_string).text_style(*memory_editor_text_style).desired_width(0.0));
+                                            if frame_data.selected_address_request_focus {
+                                                frame_data.selected_address_request_focus = false;
+                                                column.memory().request_kb_focus(response.id);
+                                            }
+
+                                            // Filter out any non Hex-Digit, doesn't seem to be a method in TextEdit for this.
+                                            frame_data.selected_address_string.retain(|c| c.is_ascii_hexdigit());
+
+                                            // Don't want more than 2 digits
+                                            if frame_data.selected_address_string.chars().count() >= 2 {
+                                                let next_address = memory_address + 1;
+                                                let new_value = u8::from_str_radix(frame_data.selected_address_string.as_str(), 16);
+
+                                                if let Ok(value) = new_value {
+                                                    // We asserted it exists, thus save to unwrap.
+                                                    write_function.unwrap()(memory, memory_address, value);
+                                                }
+
+                                                if address_space.contains(&next_address) {
+                                                    frame_data.selected_address = next_address.into();
+                                                    frame_data.selected_address_request_focus = true;
+                                                    frame_data.selected_address_string.clear();//format!("{:02X}", read_function(memory, next_address))
+                                                } else {
+                                                    frame_data.selected_address = None;
+                                                }
+                                            }
+
+                                            // We automatically write the value when there is a valid u8, so discard otherwise.
+                                            if response.lost_kb_focus {
+                                                frame_data.selected_address_string.clear();
+                                                frame_data.selected_address = None;
+                                            }
+                                        }
+                                    } else {
+                                        let response = column
+                                            .add(Label::new(label_text).text_color(text_colour).text_style(*memory_editor_text_style));
+                                        if response.clicked {
+                                            frame_data.selected_address = Some(memory_address);
+                                            frame_data.selected_address_request_focus = true;
+                                        }
+                                    }
                                 }
                             });
                         }
@@ -184,6 +230,7 @@ impl<T> MemoryEditor<T> {
                 });
 
             // After we've drawn the area we want to resize to we want to save this size for the next frame.
+            // In case it has became smaller we'll shrink the window.
             frame_data.previous_frame_editor_width = ui.min_rect().width();
         });
     }
@@ -199,10 +246,7 @@ impl<T> MemoryEditor<T> {
             data_preview_options,
             show_ascii_sidebar,
             show_zero_colour,
-            zero_colour,
             column_count,
-            address_text_colour,
-            memory_editor_text_style,
             combo_box_enabled,
             selected_address_range: combo_box_value_selected,
             ..

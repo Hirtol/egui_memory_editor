@@ -83,8 +83,12 @@ impl Default for MemoryEditorOptions {
 }
 
 /// A rather hacky struct to maintain some state between frames for layout purposes
-#[derive(Debug, Default, Copy, Clone)]
+#[derive(Debug, Default, Clone)]
 pub(crate) struct BetweenFrameUiData {
     /// Used to ensure we can resize the window in height, but not in width.
     pub previous_frame_editor_width: f32,
+    /// The address a user clicked on in the UI in the previous frame, used for DataPreview
+    pub selected_address: Option<usize>,
+    pub selected_address_string: String,
+    pub selected_address_request_focus: bool,
 }
