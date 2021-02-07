@@ -121,7 +121,7 @@ impl<T> MemoryEditor<T> {
                         ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters)).text_color(address_text_colour).text_style(memory_editor_address_text_style));
 
                         // Render the memory values
-                        self.draw_memory_values(memory, &address_space, ui, start_address);
+                        self.draw_memory_values(ui, memory, start_address, &address_space);
 
                         // Optional ASCII side
                         if show_ascii_sidebar {
@@ -180,7 +180,7 @@ impl<T> MemoryEditor<T> {
             });
     }
 
-    fn draw_memory_values(&mut self, memory: &mut T, address_space: &Range<usize>, mut ui: &mut Ui, start_address: usize) {
+    fn draw_memory_values(&mut self, ui: &mut Ui, memory: &mut T, start_address: usize, address_space: &Range<usize>) {
         let mut frame_data = &mut self.frame_data;
         let options = &self.options;
         let read_function = self.read_function;
