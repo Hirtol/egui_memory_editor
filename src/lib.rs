@@ -50,7 +50,7 @@ impl<T> MemoryEditor<T> {
     /// either the [`Self::window_ui`] or the [`Self::draw_viewer_contents`] method.
     ///
     /// ```
-    /// # use egui_memory_viewer::MemoryEditor;
+    /// # use egui_memory_editor::MemoryEditor;
     /// let mut memory_base = vec![0xFF; 0xFF];
     /// let mut memory_editor: MemoryEditor<Vec<u8>> = MemoryEditor::new(|memory, address| memory[address]);
     /// ```
@@ -246,15 +246,15 @@ impl<T> MemoryEditor<T> {
                     // For Editing
                     if let (Some(address), Some(write_function)) = (frame_data.selected_address, write_function) {
                         if address == memory_address {
-                            let response = column.add(
-                                TextEdit::singleline(&mut frame_data.selected_address_string)
+                            let response = column.with_layout(Layout::left_to_right(), |ui| {
+                                ui.add(TextEdit::singleline(&mut frame_data.selected_address_string)
                                     .text_style(options.memory_editor_text_style)
                                     .desired_width(0.0)
-                                    .hint_text(label_text)
-                            );
+                                    .hint_text(label_text))
+                            });
                             if frame_data.selected_address_request_focus {
                                 frame_data.selected_address_request_focus = false;
-                                column.memory().request_kb_focus(response.id);
+                                column.memory().request_kb_focus(response.inner.id);
                             }
 
                             // Filter out any non Hex-Digit, doesn't seem to be a method in TextEdit for this.
@@ -280,7 +280,7 @@ impl<T> MemoryEditor<T> {
                             }
 
                             // We automatically write the value when there is a valid u8, so discard otherwise.
-                            if response.lost_kb_focus() {
+                            if response.inner.lost_kb_focus() {
                                 frame_data.selected_address_string.clear();
                                 frame_data.selected_address = None;
                             }
@@ -288,12 +288,12 @@ impl<T> MemoryEditor<T> {
                         }
                     }
                     // Read-only values.
-                    let response = column.add(
-                        Label::new(label_text)
-                            .text_color(text_colour)
-                            .text_style(options.memory_editor_text_style),
-                    );
-                    if response.clicked() {
+                    let response = column.with_layout(Layout::bottom_up(Align::Center), |ui| {
+                        ui.add(Label::new(label_text)
+                                   .text_color(text_colour)
+                                   .text_style(options.memory_editor_text_style),)
+                    });
+                    if response.inner.clicked() {
                         frame_data.selected_address = Some(memory_address);
                         frame_data.selected_address_request_focus = true;
                     }
@@ -323,8 +323,9 @@ impl<T> MemoryEditor<T> {
                     if self.frame_data.selected_address.map_or(false, |adr| adr == memory_address) {
                         label = label.background_color(column.visuals().code_bg_color).text_color(options.highlight_colour);
                     }
-
-                    column.add(label);
+                    column.with_layout(Layout::bottom_up(Align::Center), |ui| {
+                        ui.add(label);
+                    });
                 }
             });
         });
