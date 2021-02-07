@@ -50,10 +50,11 @@ pub struct MemoryEditorOptions {
     /// Used to check if the window is open, if you don't use the `window_ui()` call then this is irrelevant.
     pub is_open: bool,
     pub show_ascii_sidebar: bool,
+    pub show_zero_colour: bool,
     pub data_preview_options: DataPreviewOptions,
-    /// A custom colour for `0`. By default will be gray, set to `None` to have it be the same text colour as the rest.
     pub column_count: usize,
-    pub zero_colour: Option<Color32>,
+    /// A custom colour for `0`. By default will be gray.
+    pub zero_colour: Color32,
     pub address_text_colour: Color32,
     pub memory_editor_text_style: TextStyle,
     pub memory_editor_address_text_style: TextStyle,
@@ -68,14 +69,15 @@ impl Default for MemoryEditorOptions {
             is_open: true,
             data_preview_options: Default::default(),
             show_ascii_sidebar: true,
-            zero_colour: Some(Color32::from_gray(80)),
+            show_zero_colour: true,
+            zero_colour: Color32::from_gray(80),
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
             memory_editor_text_style: TextStyle::Heading, // Non-monospace default as I personally find it too small, and columns provide close-enough alignment.
             memory_editor_address_text_style: TextStyle::Heading,
             memory_editor_ascii_text_style: TextStyle::Monospace,
             combo_box_enabled: false,
-            selected_address_range: DEFAULT_RANGE_NAME.to_string()
+            selected_address_range: DEFAULT_RANGE_NAME.to_string(),
         }
     }
 }

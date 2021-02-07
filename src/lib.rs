@@ -105,6 +105,7 @@ impl<T> MemoryEditor<T> {
         let MemoryEditorOptions {
             data_preview_options,
             show_ascii_sidebar,
+            show_zero_colour,
             zero_colour,
             column_count,
             address_text_colour,
@@ -119,8 +120,6 @@ impl<T> MemoryEditor<T> {
         // This is janky, but can't think of a better way.
         let address_characters = format!("{:X}", address_space.end).chars().count();
         // Memory Editor Part.
-        let zero_colour = zero_colour.unwrap_or_else(|| ui.style().visuals.text_color());
-
         let max_lines = address_space.len().div_ceil(column_count);
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
@@ -148,8 +147,8 @@ impl<T> MemoryEditor<T> {
 
                                     let mem_val: u8 = read_function(memory, memory_address);
 
-                                    let text_colour = if mem_val == 0 {
-                                        zero_colour
+                                    let text_colour = if *show_zero_colour && mem_val == 0{
+                                        *zero_colour
                                     } else {
                                         column.style().visuals.text_color()
                                     };
@@ -199,6 +198,7 @@ impl<T> MemoryEditor<T> {
         let MemoryEditorOptions {
             data_preview_options,
             show_ascii_sidebar,
+            show_zero_colour,
             zero_colour,
             column_count,
             address_text_colour,
@@ -208,20 +208,33 @@ impl<T> MemoryEditor<T> {
             ..
         } = options;
 
-        let mut columns = *column_count as u8;
-        ui.add(egui::DragValue::u8(&mut columns).range(1.0..=64.0).prefix("Columns: ").speed(0.5));
-        *column_count = columns as usize;
+        egui::CollapsingHeader::new("Options")
+            .default_open(true)
+            .show(ui, |ui| {
+                egui::Grid::new("options_grid").show(ui, |ui| {
+                    // Memory region selection
+                    if *combo_box_enabled {
+                        egui::combo_box_with_label(ui, "Memory Region", combo_box_value_selected.clone(), |ui| {
+                            address_ranges.iter().for_each(|(range_name, _)| {
+                                ui.selectable_value(combo_box_value_selected, range_name.clone(), range_name);
+                            });
+                        });
+                    }
 
-        ui.checkbox(show_ascii_sidebar, "Show ASCII")
-            .on_hover_text(format!("{} the ASCII representation view", if *show_ascii_sidebar { "Disable" } else { "Enable" }));
+                    // Column dragger
+                    let mut columns = *column_count as u8;
+                    ui.add(egui::DragValue::u8(&mut columns).range(1.0..=64.0).prefix("Columns: ").speed(0.5));
+                    *column_count = columns as usize;
 
-        if *combo_box_enabled {
-            egui::combo_box_with_label(ui, "Memory Region", combo_box_value_selected.clone(), |ui| {
-                address_ranges.iter().for_each(|(range_name, _)| {
-                    ui.selectable_value(combo_box_value_selected, range_name.clone(), range_name);
+                    ui.end_row();
+
+                    // Checkboxes
+                    ui.checkbox(show_ascii_sidebar, "Show ASCII")
+                        .on_hover_text(format!("{} the ASCII representation view", if *show_ascii_sidebar { "Disable" } else { "Enable" }));
+                    ui.checkbox(show_zero_colour, "Custom zero colour")
+                        .on_hover_text("If enabled '0' will be coloured differently");
                 });
             });
-        }
     }
 
     /// Return the line height for the current provided `Ui` and selected `TextStyle`s
