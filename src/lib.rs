@@ -4,7 +4,8 @@ use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, T
 use num::Integer;
 
 use crate::egui_utilities::*;
-use crate::option_data::{MemoryEditorOptions, BetweenFrameUiData};
+use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions};
+use std::collections::{HashMap, BTreeMap};
 
 mod egui_utilities;
 mod list_clipper;
@@ -36,10 +37,7 @@ pub struct MemoryEditor<T> {
     /// The range of possible values to be displayed, the GUI will start at the lower bound and go up to the upper bound.
     ///
     /// Note this *currently* only supports a range that has a max of `2^24`, due to `ScrollArea` limitations.
-    address_space: Range<usize>,
-    /// The amount of characters used to indicate the current address in the sidebar of the UI.
-    /// Is derived from the provided `address_space.end`
-    address_characters: usize,
+    address_ranges: BTreeMap<String, Range<usize>>,
     /// When `true` will disallow any edits, ensuring the `write_function` will never be called.
     /// The latter therefore doesn't need to be set.
     read_only: bool,
@@ -52,15 +50,16 @@ pub struct MemoryEditor<T> {
 
 impl<T> MemoryEditor<T> {
     pub fn new(read_function: ReadFunction<T>) -> Self {
+        let mut default_range = BTreeMap::new();
+        default_range.insert(crate::option_data::DEFAULT_RANGE_NAME.to_string(), 0..u16::MAX as usize);
         MemoryEditor {
             window_name: "Memory Editor".to_string(),
             read_function,
             write_function: None,
-            address_space: (0..u16::MAX as usize),
-            address_characters: 4,
+            address_ranges: default_range,
             read_only: false,
             options: Default::default(),
-            frame_data: Default::default()
+            frame_data: Default::default(),
         }
     }
 
@@ -92,28 +91,30 @@ impl<T> MemoryEditor<T> {
     pub fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
         self.draw_options_area(ui);
 
+        ui.separator();
+
         let Self {
             options,
             read_function,
-            address_space,
-            address_characters,
+            address_ranges,
             frame_data,
             ..
         } = self;
 
         let MemoryEditorOptions {
-            show_options,
             data_preview_options,
             show_ascii_sidebar,
             zero_colour,
             column_count,
             address_text_colour,
+            selected_address_range,
             memory_editor_text_style,
             ..
         } = options;
 
-        ui.separator();
-
+        let address_space = address_ranges.get(selected_address_range).unwrap().clone();
+        // This is janky, but can't think of a better way.
+        let address_characters = format!("{:X}", address_space.end).chars().count();
         // Memory Editor Part.
         let zero_colour = zero_colour.unwrap_or_else(|| ui.style().visuals.text_color());
 
@@ -180,8 +181,6 @@ impl<T> MemoryEditor<T> {
 
                         ui.end_row();
                     }
-
-
                 });
 
             // After we've drawn the area we want to resize to we want to save this size for the next frame.
@@ -192,31 +191,36 @@ impl<T> MemoryEditor<T> {
     fn draw_options_area(&mut self, ui: &mut Ui) {
         let Self {
             options,
-            read_function,
-            address_space,
-            address_characters,
+            address_ranges,
             ..
         } = self;
 
         let MemoryEditorOptions {
-            show_options,
             data_preview_options,
             show_ascii_sidebar,
             zero_colour,
             column_count,
             address_text_colour,
             memory_editor_text_style,
+            combo_box_enabled,
+            selected_address_range: combo_box_value_selected,
             ..
         } = options;
-
-        ui.text_edit_singleline(&mut "Hey".to_string());
-        ui.button("Hello World");
 
         let mut columns = *column_count as u8;
         ui.add(egui::DragValue::u8(&mut columns).range(1.0..=64.0).prefix("Columns: ").speed(0.5));
         *column_count = columns as usize;
 
-        ui.checkbox(show_ascii_sidebar, "Show ASCII");
+        ui.checkbox(show_ascii_sidebar, "Show ASCII")
+            .on_hover_text(format!("{} the ASCII representation view", if *show_ascii_sidebar { "Disable" } else { "Enable" }));
+
+        if *combo_box_enabled {
+            egui::combo_box_with_label(ui, "Memory Region", combo_box_value_selected.clone(), |ui| {
+                address_ranges.iter().for_each(|(range_name, _)| {
+                    ui.selectable_value(combo_box_value_selected, range_name.clone(), range_name);
+                });
+            });
+        }
     }
 
     /// Shrink the window to the previous frame's memory viewer's width.
@@ -240,10 +244,24 @@ impl<T> MemoryEditor<T> {
     }
 
     /// Set the range of addresses that the UI will display, and subsequently query for using the `read_function`
+    ///
+    /// An unnamed alternative for the `set_address_ranges()`
     pub fn set_address_space(mut self, address_range: Range<usize>) -> Self {
-        self.address_space = address_range;
-        // This is incredibly janky, but I couldn't find a better way atm. If there is one, please mention it!
-        self.address_characters = format!("{:X}", self.address_space.end).chars().count();
+        self.address_ranges = BTreeMap::new();
+        self.address_ranges.insert(crate::option_data::DEFAULT_RANGE_NAME.to_string(), address_range);
+        self
+    }
+
+    /// Set an arbitrary amount of ranges, to be selected by a combo box in the UI if `address_ranges.len() > 1`.
+    ///
+    /// These ranges will be the addresses the UI will display, and subsequently query for using the `read_function`
+    pub fn set_address_ranges(mut self, address_ranges: BTreeMap<String, Range<usize>>) -> Self {
+        assert!(address_ranges.len() > 0, "There needs to be at least one address range specified!");
+        self.address_ranges = address_ranges;
+        self.options.combo_box_enabled = self.address_ranges.len() > 1;
+        if let Some((name, _)) = self.address_ranges.iter().next() {
+            self.options.selected_address_range = name.clone();
+        }
         self
     }
 

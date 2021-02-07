@@ -1,5 +1,7 @@
 use egui::{Color32, TextStyle};
 
+pub(crate) const DEFAULT_RANGE_NAME: &str = "DEFAULT";
+
 #[derive(Copy, Clone, Debug)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub enum Endianness {
@@ -41,33 +43,35 @@ impl Default for DataPreviewOptions {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Clone, Debug)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct MemoryEditorOptions {
     /// Used to check if the window is open, if you don't use the `window_ui()` call then this is irrelevant.
     pub is_open: bool,
-    pub show_options: bool,
-    pub data_preview_options: DataPreviewOptions,
     pub show_ascii_sidebar: bool,
+    pub data_preview_options: DataPreviewOptions,
     /// A custom colour for `0`. By default will be gray, set to `None` to have it be the same text colour as the rest.
-    pub zero_colour: Option<Color32>,
     pub column_count: usize,
+    pub zero_colour: Option<Color32>,
     pub address_text_colour: Color32,
     pub memory_editor_text_style: TextStyle,
+    pub(crate) combo_box_enabled: bool,
+    pub(crate) selected_address_range: String,
 }
 
 impl Default for MemoryEditorOptions {
     fn default() -> Self {
         MemoryEditorOptions {
             is_open: true,
-            show_options: true,
             data_preview_options: Default::default(),
             show_ascii_sidebar: true,
             zero_colour: Some(Color32::from_gray(80)),
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
-            memory_editor_text_style: TextStyle::Monospace
+            memory_editor_text_style: TextStyle::Monospace,
+            combo_box_enabled: false,
+            selected_address_range: DEFAULT_RANGE_NAME.to_string()
         }
     }
 }
