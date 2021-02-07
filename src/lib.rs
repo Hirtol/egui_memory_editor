@@ -249,7 +249,6 @@ impl<T> MemoryEditor<T> {
                             let response = column.with_layout(Layout::left_to_right(), |ui| {
                                 ui.add(TextEdit::singleline(&mut frame_data.selected_address_string)
                                     .text_style(options.memory_editor_text_style)
-                                    .desired_width(0.0)
                                     .hint_text(label_text))
                             });
                             if frame_data.selected_address_request_focus {
