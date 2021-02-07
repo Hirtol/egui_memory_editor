@@ -56,6 +56,8 @@ pub struct MemoryEditorOptions {
     pub zero_colour: Option<Color32>,
     pub address_text_colour: Color32,
     pub memory_editor_text_style: TextStyle,
+    pub memory_editor_address_text_style: TextStyle,
+    pub memory_editor_ascii_text_style: TextStyle,
     pub(crate) combo_box_enabled: bool,
     pub(crate) selected_address_range: String,
 }
@@ -69,7 +71,9 @@ impl Default for MemoryEditorOptions {
             zero_colour: Some(Color32::from_gray(80)),
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
-            memory_editor_text_style: TextStyle::Monospace,
+            memory_editor_text_style: TextStyle::Heading, // Non-monospace default as I personally find it too small, and columns provide close-enough alignment.
+            memory_editor_address_text_style: TextStyle::Heading,
+            memory_editor_ascii_text_style: TextStyle::Monospace,
             combo_box_enabled: false,
             selected_address_range: DEFAULT_RANGE_NAME.to_string()
         }

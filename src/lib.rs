@@ -1,3 +1,4 @@
+use std::collections::{BTreeMap, HashMap};
 use std::ops::Range;
 
 use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextStyle, Ui, Vec2, Window};
@@ -5,7 +6,6 @@ use num::Integer;
 
 use crate::egui_utilities::*;
 use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions};
-use std::collections::{HashMap, BTreeMap};
 
 mod egui_utilities;
 mod list_clipper;
@@ -92,6 +92,8 @@ impl<T> MemoryEditor<T> {
 
         ui.separator();
 
+        let line_height = self.get_line_height(ui);
+
         let Self {
             options,
             read_function,
@@ -107,6 +109,8 @@ impl<T> MemoryEditor<T> {
             column_count,
             address_text_colour,
             selected_address_range,
+            memory_editor_address_text_style,
+            memory_editor_ascii_text_style,
             memory_editor_text_style,
             ..
         } = options;
@@ -118,7 +122,6 @@ impl<T> MemoryEditor<T> {
         let zero_colour = zero_colour.unwrap_or_else(|| ui.style().visuals.text_color());
 
         let max_lines = address_space.len().div_ceil(column_count);
-        let line_height = get_label_line_height(ui, *memory_editor_text_style);
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
             // Memory values and addresses
@@ -126,12 +129,11 @@ impl<T> MemoryEditor<T> {
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
                 .show(ui, |mut ui| {
-                    ui.style_mut().body_text_style = *memory_editor_text_style;
                     ui.style_mut().spacing.item_spacing.x = 3.0;
 
                     for start_row in line_range.clone() {
                         let start_address = address_space.start + (start_row * *column_count);
-                        ui.colored_label(*address_text_colour, format!("0x{:01$X}", start_address, address_characters));
+                        ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters)).text_color(*address_text_colour).text_style(*memory_editor_address_text_style));
 
                         // Render the memory values
                         for grid_column in 0..column_count.div_ceil(&8) {
@@ -152,7 +154,7 @@ impl<T> MemoryEditor<T> {
                                         column.style().visuals.text_color()
                                     };
 
-                                    column.add(Label::new(format!("{:02X}", mem_val)).text_color(text_colour));
+                                    column.add(Label::new(format!("{:02X}", mem_val)).text_color(text_colour).text_style(*memory_editor_text_style));
                                 }
                             });
                         }
@@ -172,7 +174,7 @@ impl<T> MemoryEditor<T> {
 
                                         let mem_val: u8 = read_function(memory, memory_address);
                                         let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
-                                        column.add(egui::Label::new(character).text_style(TextStyle::Monospace));
+                                        column.add(egui::Label::new(character).text_style(*memory_editor_ascii_text_style));
                                     }
                                 });
                             });
@@ -220,6 +222,14 @@ impl<T> MemoryEditor<T> {
                 });
             });
         }
+    }
+
+    /// Return the line height for the current provided `Ui` and selected `TextStyle`s
+    fn get_line_height(&self, ui: &mut Ui) -> f32 {
+        let address_size = Label::new("##invisible").text_style(self.options.memory_editor_address_text_style).layout(ui).size.y;
+        let body_size = Label::new("##invisible").text_style(self.options.memory_editor_text_style).layout(ui).size.y;
+        let ascii_size = Label::new("##invisible").text_style(self.options.memory_editor_ascii_text_style).layout(ui).size.y;
+        address_size.max(body_size).max(ascii_size) + ui.style().spacing.item_spacing.y
     }
 
     /// Shrink the window to the previous frame's memory viewer's width.

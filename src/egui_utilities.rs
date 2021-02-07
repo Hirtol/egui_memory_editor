@@ -11,8 +11,3 @@ pub fn get_current_scroll(ui: &Ui) -> (f32, f32) {
         ui.min_rect().height() - ui.clip_rect().height() + 2.0 * margin,
     )
 }
-
-/// Return the line height for the current provided `Ui` and `TextStyle`
-pub fn get_label_line_height(ui: &Ui, style: TextStyle) -> f32 {
-    Label::new("##invisible").text_style(style).layout(ui).size.y + ui.style().spacing.item_spacing.y
-}
