@@ -94,16 +94,6 @@ impl<T> MemoryEditor<T> {
 
         let line_height = self.get_line_height(ui);
 
-        let Self {
-            options,
-            read_function,
-            write_function,
-            address_ranges,
-            read_only,
-            frame_data,
-            ..
-        } = self;
-
         let MemoryEditorOptions {
             data_preview_options,
             show_ascii_sidebar,
@@ -116,13 +106,14 @@ impl<T> MemoryEditor<T> {
             memory_editor_ascii_text_style,
             memory_editor_text_style,
             ..
-        } = options;
+        } = self.options.clone();
 
-        let address_space = address_ranges.get(selected_address_range).unwrap().clone();
+        let address_space = self.address_ranges.get(&selected_address_range).unwrap().clone();
+
         // This is janky, but can't think of a better way.
         let address_characters = format!("{:X}", address_space.end).chars().count();
         // Memory Editor Part.
-        let max_lines = address_space.len().div_ceil(column_count);
+        let max_lines = address_space.len().div_ceil(&column_count);
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
             // Memory values and addresses
@@ -132,12 +123,12 @@ impl<T> MemoryEditor<T> {
                 .show(ui, |mut ui| {
                     ui.style_mut().spacing.item_spacing.x = 3.0;
                     for start_row in line_range.clone() {
-                        let start_address = address_space.start + (start_row * *column_count);
-                        ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters)).text_color(*address_text_colour).text_style(*memory_editor_address_text_style));
+                        let start_address = address_space.start + (start_row * column_count);
+                        ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters)).text_color(address_text_colour).text_style(memory_editor_address_text_style));
 
                         // Render the memory values
                         for grid_column in 0..column_count.div_ceil(&8) {
-                            ui.columns((*column_count - 8 * grid_column).min(8), |columns| {
+                            ui.columns((column_count - 8 * grid_column).min(8), |columns| {
                                 let start_address = start_address + 8 * grid_column;
                                 for (i, column) in columns.iter_mut().enumerate() {
                                     let memory_address = start_address + i;
@@ -146,19 +137,21 @@ impl<T> MemoryEditor<T> {
                                         break;
                                     }
 
-                                    let mem_val: u8 = read_function(memory, memory_address);
+                                    let mem_val: u8 = (self.read_function)(memory, memory_address);
 
-                                    let text_colour = if *show_zero_colour && mem_val == 0 {
-                                        *zero_colour
+                                    let text_colour = if show_zero_colour && mem_val == 0 {
+                                        zero_colour
                                     } else {
                                         column.style().visuals.text_color()
                                     };
 
                                     let mut label_text = format!("{:02X}", mem_val);
+                                    let mut frame_data = &mut self.frame_data;
+                                    let write_function = &self.write_function;
 
                                     if let Some(address) = frame_data.selected_address {
-                                        if !*read_only && address == memory_address {
-                                            let response = column.add(TextEdit::singleline(&mut frame_data.selected_address_string).text_style(*memory_editor_text_style).desired_width(0.0));
+                                        if !self.read_only && address == memory_address {
+                                            let response = column.add(TextEdit::singleline(&mut frame_data.selected_address_string).text_style(memory_editor_text_style).desired_width(0.0));
                                             if frame_data.selected_address_request_focus {
                                                 frame_data.selected_address_request_focus = false;
                                                 column.memory().request_kb_focus(response.id);
@@ -191,35 +184,35 @@ impl<T> MemoryEditor<T> {
                                                 frame_data.selected_address_string.clear();
                                                 frame_data.selected_address = None;
                                             }
+                                            continue;
                                         }
-                                    } else {
-                                        let response = column
-                                            .add(Label::new(label_text).text_color(text_colour).text_style(*memory_editor_text_style));
-                                        if response.clicked {
-                                            frame_data.selected_address = Some(memory_address);
-                                            frame_data.selected_address_request_focus = true;
-                                        }
+                                    }
+                                    let response = column
+                                        .add(Label::new(label_text).text_color(text_colour).text_style(memory_editor_text_style));
+                                    if response.clicked {
+                                        frame_data.selected_address = Some(memory_address);
+                                        frame_data.selected_address_request_focus = true;
                                     }
                                 }
                             });
                         }
 
                         // Optional ASCII side
-                        if *show_ascii_sidebar {
+                        if show_ascii_sidebar {
                             // Not pretty atm, needs a better method: TODO
                             ui.horizontal(|ui| {
                                 ui.add(egui::Separator::new().vertical().spacing(3.0));
                                 ui.style_mut().spacing.item_spacing.x = 0.0;
-                                ui.columns(*column_count, |columns| {
+                                ui.columns(column_count, |columns| {
                                     for (i, column) in columns.iter_mut().enumerate() {
                                         let memory_address = start_address + i;
                                         if !address_space.contains(&memory_address) {
                                             break;
                                         }
 
-                                        let mem_val: u8 = read_function(memory, memory_address);
+                                        let mem_val: u8 = (self.read_function)(memory, memory_address);
                                         let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
-                                        column.add(egui::Label::new(character).text_style(*memory_editor_ascii_text_style));
+                                        column.add(egui::Label::new(character).text_style(memory_editor_ascii_text_style));
                                     }
                                 });
                             });
@@ -231,7 +224,7 @@ impl<T> MemoryEditor<T> {
 
             // After we've drawn the area we want to resize to we want to save this size for the next frame.
             // In case it has became smaller we'll shrink the window.
-            frame_data.previous_frame_editor_width = ui.min_rect().width();
+            self.frame_data.previous_frame_editor_width = ui.min_rect().width();
         });
     }
 
