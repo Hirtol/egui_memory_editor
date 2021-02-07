@@ -223,7 +223,12 @@ impl<T> MemoryEditor<T> {
                     // For Editing
                     if let (Some(address), Some(write_function)) = (frame_data.selected_address, write_function) {
                         if address == memory_address {
-                            let response = column.add(TextEdit::singleline(&mut frame_data.selected_address_string).text_style(options.memory_editor_text_style).desired_width(0.0));
+                            let response = column.add(
+                                TextEdit::singleline(&mut frame_data.selected_address_string)
+                                    .text_style(options.memory_editor_text_style)
+                                    .desired_width(0.0)
+                                    .hint_text(label_text)
+                            );
                             if frame_data.selected_address_request_focus {
                                 frame_data.selected_address_request_focus = false;
                                 column.memory().request_kb_focus(response.id);
