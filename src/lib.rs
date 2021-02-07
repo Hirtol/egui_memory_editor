@@ -53,8 +53,8 @@ impl<T> MemoryEditor<T> {
     ///
     /// ```
     /// # use egui_memory_viewer::MemoryEditor;
-    /// let mut memory_base = [0xFF; 0xFF];
-    /// let mut memory_editor: MemoryEditor<&[u8]> = MemoryEditor::new(|memory, address| memory[address]);
+    /// let mut memory_base = vec![0xFF; 0xFF];
+    /// let mut memory_editor: MemoryEditor<Vec<u8>> = MemoryEditor::new(|memory, address| memory[address]);
     /// ```
     ///
     /// [w]: MemoryEditor::window_ui()
