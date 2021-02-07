@@ -1,4 +1,4 @@
-use egui::{Label, TextStyle, Ui};
+use egui::Ui;
 
 /// Returns the `(current_scroll, max_scroll)` of the current UI (assuming it is within a `ScrollArea`).
 /// Taken from the `egui` scrolling demo.

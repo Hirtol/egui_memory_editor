@@ -1,10 +1,9 @@
-use std::collections::{BTreeMap, HashMap};
+use std::collections::BTreeMap;
 use std::ops::Range;
 
 use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
 use num::Integer;
 
-use crate::egui_utilities::*;
 use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions};
 
 mod egui_utilities;
@@ -122,11 +121,15 @@ impl<T> MemoryEditor<T> {
             egui::Grid::new("mem_edit_grid")
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
-                .show(ui, |mut ui| {
+                .show(ui, |ui| {
                     ui.style_mut().spacing.item_spacing.x = 3.0;
                     for start_row in line_range.clone() {
                         let start_address = address_space.start + (start_row * column_count);
-                        ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters)).text_color(address_text_colour).text_style(memory_editor_address_text_style));
+                        ui.add(
+                            Label::new(format!("0x{:01$X}", start_address, address_characters))
+                                .text_color(address_text_colour)
+                                .text_style(memory_editor_address_text_style),
+                        );
 
                         // Render the memory values
                         self.draw_memory_values(ui, memory, start_address, &address_space);
@@ -174,7 +177,12 @@ impl<T> MemoryEditor<T> {
 
                     // Column dragger
                     let mut columns = *column_count as u8;
-                    ui.add(egui::DragValue::u8(&mut columns).range(1.0..=64.0).prefix("Columns: ").speed(0.5));
+                    ui.add(
+                        egui::DragValue::u8(&mut columns)
+                            .range(1.0..=64.0)
+                            .prefix("Columns: ")
+                            .speed(0.5),
+                    );
                     *column_count = columns as usize;
 
                     ui.end_row();
@@ -189,7 +197,7 @@ impl<T> MemoryEditor<T> {
     }
 
     fn draw_memory_values(&mut self, ui: &mut Ui, memory: &mut T, start_address: usize, address_space: &Range<usize>) {
-        let mut frame_data = &mut self.frame_data;
+        let frame_data = &mut self.frame_data;
         let options = &self.options;
         let read_function = self.read_function;
         let write_function = &self.write_function;
@@ -212,7 +220,7 @@ impl<T> MemoryEditor<T> {
                         column.style().visuals.text_color()
                     };
 
-                    let mut label_text = format!("{:02X}", mem_val);
+                    let label_text = format!("{:02X}", mem_val);
 
                     // For Editing
                     if let (Some(address), Some(write_function)) = (frame_data.selected_address, write_function) {
@@ -239,7 +247,7 @@ impl<T> MemoryEditor<T> {
                                 if address_space.contains(&next_address) {
                                     frame_data.selected_address = next_address.into();
                                     frame_data.selected_address_request_focus = true;
-                                    frame_data.selected_address_string.clear();//format!("{:02X}", read_function(memory, next_address))
+                                    frame_data.selected_address_string.clear();
                                 } else {
                                     frame_data.selected_address = None;
                                 }
@@ -254,8 +262,11 @@ impl<T> MemoryEditor<T> {
                         }
                     }
                     // Read only values.
-                    let response = column
-                        .add(Label::new(label_text).text_color(text_colour).text_style(options.memory_editor_text_style));
+                    let response = column.add(
+                        Label::new(label_text)
+                            .text_color(text_colour)
+                            .text_style(options.memory_editor_text_style),
+                    );
                     if response.clicked {
                         frame_data.selected_address = Some(memory_address);
                         frame_data.selected_address_request_focus = true;
