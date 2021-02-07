@@ -243,14 +243,14 @@ impl<T> MemoryEditor<T> {
                                 let new_value = u8::from_str_radix(frame_data.selected_address_string.as_str(), 16);
 
                                 if let Ok(value) = new_value {
-                                    // We asserted it exists, thus save to unwrap.
                                     write_function(memory, memory_address, value);
                                 }
+
+                                frame_data.selected_address_string.clear();
 
                                 if address_space.contains(&next_address) {
                                     frame_data.selected_address = next_address.into();
                                     frame_data.selected_address_request_focus = true;
-                                    frame_data.selected_address_string.clear();
                                 } else {
                                     frame_data.selected_address = None;
                                 }
