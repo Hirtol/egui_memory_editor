@@ -16,7 +16,7 @@ pub mod option_data;
 ///
 /// - `&mut T`: the object on which the read should be performed.
 /// - `usize`: The address of the read.
-pub type ReadFunction<T> = Box<dyn FnMut(&mut T, usize) -> u8>;
+pub type ReadFunction<T> = fn(&mut T, usize) -> u8;
 /// Writes the changes the user made to the `T` object.
 ///
 /// # Arguments
@@ -24,13 +24,13 @@ pub type ReadFunction<T> = Box<dyn FnMut(&mut T, usize) -> u8>;
 /// - `&mut T`: the object whose state is to be updated.
 /// - `usize`: The address of the intended write.
 /// - `u8`: The value set by the user for the provided address.
-pub type WriteFunction<T> = Box<dyn FnMut(&mut T, usize, u8)>;
+pub type WriteFunction<T> = fn(&mut T, usize, u8);
 
 pub struct MemoryEditor<T> {
     /// The name of the `egui` window, can be left blank.
     window_name: String,
     /// The function used for getting the values out of the provided type `T` and displaying them.
-    read_function: Option<ReadFunction<T>>,
+    read_function: ReadFunction<T>,
     /// The function used when attempts are made to change values within the GUI.
     write_function: Option<WriteFunction<T>>,
     /// The range of possible values to be displayed, the GUI will start at the lower bound and go up to the upper bound.
@@ -51,10 +51,10 @@ pub struct MemoryEditor<T> {
 }
 
 impl<T> MemoryEditor<T> {
-    pub fn new(text: impl Into<String>) -> Self {
+    pub fn new(read_function: ReadFunction<T>) -> Self {
         MemoryEditor {
-            window_name: text.into(),
-            read_function: None,
+            window_name: "Memory Editor".to_string(),
+            read_function,
             write_function: None,
             address_space: (0..u16::MAX as usize),
             address_characters: 4,
@@ -68,7 +68,6 @@ impl<T> MemoryEditor<T> {
     ///
     /// If you want to make your own window/container to be used for the editor contents, you can use `draw_viewer_contents()`.
     pub fn window_ui(&mut self, ctx: &CtxRef, memory: &mut T) {
-        assert!(self.read_function.is_some(), "The read function needs to be set before one can run the editor!");
         assert!(self.write_function.is_some() || self.read_only, "The write function needs to be set if not in read only mode!");
 
         let mut is_open = self.options.is_open;
@@ -117,7 +116,6 @@ impl<T> MemoryEditor<T> {
 
         // Memory Editor Part.
         let zero_colour = zero_colour.unwrap_or_else(|| ui.style().visuals.text_color());
-        let read_function = read_function.as_mut().unwrap();
 
         let max_lines = address_space.len().div_ceil(column_count);
         let line_height = get_label_line_height(ui, *memory_editor_text_style);
@@ -136,9 +134,9 @@ impl<T> MemoryEditor<T> {
                         ui.colored_label(*address_text_colour, format!("0x{:01$X}", start_address, address_characters));
 
                         // Render the memory values
-                        for c in 0..column_count.div_ceil(&8) {
-                            ui.columns((*column_count - 8 * c).min(8), |columns| {
-                                let start_address = start_address + 8 * c;
+                        for grid_column in 0..column_count.div_ceil(&8) {
+                            ui.columns((*column_count - 8 * grid_column).min(8), |columns| {
+                                let start_address = start_address + 8 * grid_column;
                                 for (i, column) in columns.iter_mut().enumerate() {
                                     let memory_address = start_address + i;
 
@@ -227,11 +225,9 @@ impl<T> MemoryEditor<T> {
         ui.set_max_width(ui.min_rect().width().max(self.frame_data.previous_frame_editor_width));
     }
 
-    /// Set the function used to read from the provided object `T`.
-    ///
-    /// This function will always be necessary, and the editor will `panic` if it's not available.
-    pub fn set_read_function(mut self, read_function: ReadFunction<T>) -> Self {
-        self.read_function = Some(read_function);
+    /// Set the window title, only relevant if using the `window_ui()` call.
+    pub fn set_window_title(mut self, title: impl Into<String>) -> Self {
+        self.window_name = title.into();
         self
     }
 
