@@ -56,6 +56,7 @@ pub struct MemoryEditorOptions {
     /// A custom colour for `0`. By default will be gray.
     pub zero_colour: Color32,
     pub address_text_colour: Color32,
+    pub highlight_colour: Color32,
     pub memory_editor_text_style: TextStyle,
     pub memory_editor_address_text_style: TextStyle,
     pub memory_editor_ascii_text_style: TextStyle,
@@ -73,6 +74,7 @@ impl Default for MemoryEditorOptions {
             zero_colour: Color32::from_gray(80),
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
+            highlight_colour: Color32::from_rgb(0, 140, 140),
             memory_editor_text_style: TextStyle::Heading, // Non-monospace default as I personally find it too small, and columns provide close-enough alignment.
             memory_editor_address_text_style: TextStyle::Heading,
             memory_editor_ascii_text_style: TextStyle::Monospace,

@@ -295,7 +295,13 @@ impl<T> MemoryEditor<T> {
 
                     let mem_val: u8 = (self.read_function)(memory, memory_address);
                     let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
-                    column.add(egui::Label::new(character).text_style(options.memory_editor_ascii_text_style));
+                    let mut label = egui::Label::new(character).text_style(options.memory_editor_ascii_text_style);
+
+                    if self.frame_data.selected_address.map_or(false, |adr| adr == memory_address) {
+                        label = label.background_color(column.visuals().code_bg_color).text_color(options.highlight_colour);
+                    }
+
+                    column.add(label);
                 }
             });
         });
