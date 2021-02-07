@@ -50,13 +50,11 @@ pub struct MemoryEditor<T> {
 
 impl<T> MemoryEditor<T> {
     pub fn new(read_function: ReadFunction<T>) -> Self {
-        let mut default_range = BTreeMap::new();
-        default_range.insert(crate::option_data::DEFAULT_RANGE_NAME.to_string(), 0..u16::MAX as usize);
         MemoryEditor {
             window_name: "Memory Editor".to_string(),
             read_function,
             write_function: None,
-            address_ranges: default_range,
+            address_ranges: BTreeMap::new(),
             read_only: false,
             options: Default::default(),
             frame_data: Default::default(),
@@ -67,8 +65,6 @@ impl<T> MemoryEditor<T> {
     ///
     /// If you want to make your own window/container to be used for the editor contents, you can use `draw_viewer_contents()`.
     pub fn window_ui(&mut self, ctx: &CtxRef, memory: &mut T) {
-        assert!(self.write_function.is_some() || self.read_only, "The write function needs to be set if not in read only mode!");
-
         let mut is_open = self.options.is_open;
 
         Window::new(self.window_name.clone())
@@ -89,6 +85,9 @@ impl<T> MemoryEditor<T> {
     ///
     /// Use `window_ui()` if you want to have a window with the contents instead.
     pub fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
+        assert!(self.address_ranges.len() > 0, "At least one address range needs to be added to render the contents!");
+        assert!(self.write_function.is_some() || self.read_only, "The write function needs to be set if not in read only mode!");
+
         self.draw_options_area(ui);
 
         ui.separator();
@@ -230,7 +229,7 @@ impl<T> MemoryEditor<T> {
     }
 
     /// Set the window title, only relevant if using the `window_ui()` call.
-    pub fn set_window_title(mut self, title: impl Into<String>) -> Self {
+    pub fn with_window_title(mut self, title: impl Into<String>) -> Self {
         self.window_name = title.into();
         self
     }
@@ -238,26 +237,20 @@ impl<T> MemoryEditor<T> {
     /// Set the function used to write to the provided object `T`.
     ///
     /// This function is only necessary if `read_only` is `false`.
-    pub fn set_write_function(mut self, write_function: WriteFunction<T>) -> Self {
+    pub fn with_write_function(mut self, write_function: WriteFunction<T>) -> Self {
         self.write_function = Some(write_function);
         self
     }
 
-    /// Set the range of addresses that the UI will display, and subsequently query for using the `read_function`
+    /// Add an address range to the range list.
+    /// Multiple address ranges can be added, and will be displayed in the UI by a drop-down box if more than 1
+    /// range was added.
     ///
-    /// An unnamed alternative for the `set_address_ranges()`
-    pub fn set_address_space(mut self, address_range: Range<usize>) -> Self {
-        self.address_ranges = BTreeMap::new();
-        self.address_ranges.insert(crate::option_data::DEFAULT_RANGE_NAME.to_string(), address_range);
-        self
-    }
-
-    /// Set an arbitrary amount of ranges, to be selected by a combo box in the UI if `address_ranges.len() > 1`.
+    /// The first range that is added will be displayed by default when launching the UI.
     ///
-    /// These ranges will be the addresses the UI will display, and subsequently query for using the `read_function`
-    pub fn set_address_ranges(mut self, address_ranges: BTreeMap<String, Range<usize>>) -> Self {
-        assert!(address_ranges.len() > 0, "There needs to be at least one address range specified!");
-        self.address_ranges = address_ranges;
+    /// The UI will query your set `read_function` with the values within this `Range`
+    pub fn with_address_range(mut self, range_name: impl Into<String>, address_range: Range<usize>) -> Self {
+        self.address_ranges.insert(range_name.into(), address_range);
         self.options.combo_box_enabled = self.address_ranges.len() > 1;
         if let Some((name, _)) = self.address_ranges.iter().next() {
             self.options.selected_address_range = name.clone();
@@ -267,7 +260,7 @@ impl<T> MemoryEditor<T> {
 
     /// If set to `true` the UI will not allow any manual memory edits, and thus the `write_function` will never be called
     /// (and therefore doesn't need to be set).
-    pub fn set_read_only(mut self, read_only: bool) -> Self {
+    pub fn with_read_only(mut self, read_only: bool) -> Self {
         self.read_only = read_only;
         self
     }
