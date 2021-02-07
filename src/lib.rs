@@ -97,26 +97,20 @@ impl<T> MemoryEditor<T> {
         let MemoryEditorOptions {
             data_preview_options,
             show_ascii_sidebar,
-            show_zero_colour,
-            zero_colour,
             column_count,
             address_text_colour,
             selected_address_range,
             memory_editor_address_text_style,
-            memory_editor_ascii_text_style,
-            memory_editor_text_style,
             ..
         } = self.options.clone();
 
         let address_space = self.address_ranges.get(&selected_address_range).unwrap().clone();
-
         // This is janky, but can't think of a better way.
         let address_characters = format!("{:X}", address_space.end).chars().count();
         // Memory Editor Part.
         let max_lines = address_space.len().div_ceil(&column_count);
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
-            // Memory values and addresses
             egui::Grid::new("mem_edit_grid")
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
@@ -127,95 +121,11 @@ impl<T> MemoryEditor<T> {
                         ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters)).text_color(address_text_colour).text_style(memory_editor_address_text_style));
 
                         // Render the memory values
-                        for grid_column in 0..column_count.div_ceil(&8) {
-                            ui.columns((column_count - 8 * grid_column).min(8), |columns| {
-                                let start_address = start_address + 8 * grid_column;
-                                for (i, column) in columns.iter_mut().enumerate() {
-                                    let memory_address = start_address + i;
-
-                                    if !address_space.contains(&memory_address) {
-                                        break;
-                                    }
-
-                                    let mem_val: u8 = (self.read_function)(memory, memory_address);
-
-                                    let text_colour = if show_zero_colour && mem_val == 0 {
-                                        zero_colour
-                                    } else {
-                                        column.style().visuals.text_color()
-                                    };
-
-                                    let mut label_text = format!("{:02X}", mem_val);
-                                    let mut frame_data = &mut self.frame_data;
-                                    let write_function = &self.write_function;
-
-                                    if let Some(address) = frame_data.selected_address {
-                                        if !self.read_only && address == memory_address {
-                                            let response = column.add(TextEdit::singleline(&mut frame_data.selected_address_string).text_style(memory_editor_text_style).desired_width(0.0));
-                                            if frame_data.selected_address_request_focus {
-                                                frame_data.selected_address_request_focus = false;
-                                                column.memory().request_kb_focus(response.id);
-                                            }
-
-                                            // Filter out any non Hex-Digit, doesn't seem to be a method in TextEdit for this.
-                                            frame_data.selected_address_string.retain(|c| c.is_ascii_hexdigit());
-
-                                            // Don't want more than 2 digits
-                                            if frame_data.selected_address_string.chars().count() >= 2 {
-                                                let next_address = memory_address + 1;
-                                                let new_value = u8::from_str_radix(frame_data.selected_address_string.as_str(), 16);
-
-                                                if let Ok(value) = new_value {
-                                                    // We asserted it exists, thus save to unwrap.
-                                                    write_function.unwrap()(memory, memory_address, value);
-                                                }
-
-                                                if address_space.contains(&next_address) {
-                                                    frame_data.selected_address = next_address.into();
-                                                    frame_data.selected_address_request_focus = true;
-                                                    frame_data.selected_address_string.clear();//format!("{:02X}", read_function(memory, next_address))
-                                                } else {
-                                                    frame_data.selected_address = None;
-                                                }
-                                            }
-
-                                            // We automatically write the value when there is a valid u8, so discard otherwise.
-                                            if response.lost_kb_focus {
-                                                frame_data.selected_address_string.clear();
-                                                frame_data.selected_address = None;
-                                            }
-                                            continue;
-                                        }
-                                    }
-                                    let response = column
-                                        .add(Label::new(label_text).text_color(text_colour).text_style(memory_editor_text_style));
-                                    if response.clicked {
-                                        frame_data.selected_address = Some(memory_address);
-                                        frame_data.selected_address_request_focus = true;
-                                    }
-                                }
-                            });
-                        }
+                        self.draw_memory_values(memory, &address_space, ui, start_address);
 
                         // Optional ASCII side
                         if show_ascii_sidebar {
-                            // Not pretty atm, needs a better method: TODO
-                            ui.horizontal(|ui| {
-                                ui.add(egui::Separator::new().vertical().spacing(3.0));
-                                ui.style_mut().spacing.item_spacing.x = 0.0;
-                                ui.columns(column_count, |columns| {
-                                    for (i, column) in columns.iter_mut().enumerate() {
-                                        let memory_address = start_address + i;
-                                        if !address_space.contains(&memory_address) {
-                                            break;
-                                        }
-
-                                        let mem_val: u8 = (self.read_function)(memory, memory_address);
-                                        let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
-                                        column.add(egui::Label::new(character).text_style(memory_editor_ascii_text_style));
-                                    }
-                                });
-                            });
+                            self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
                         }
 
                         ui.end_row();
@@ -229,12 +139,6 @@ impl<T> MemoryEditor<T> {
     }
 
     fn draw_options_area(&mut self, ui: &mut Ui) {
-        let Self {
-            options,
-            address_ranges,
-            ..
-        } = self;
-
         let MemoryEditorOptions {
             data_preview_options,
             show_ascii_sidebar,
@@ -243,7 +147,9 @@ impl<T> MemoryEditor<T> {
             combo_box_enabled,
             selected_address_range: combo_box_value_selected,
             ..
-        } = options;
+        } = &mut self.options;
+
+        let address_ranges = &self.address_ranges;
 
         egui::CollapsingHeader::new("Options")
             .default_open(true)
@@ -274,6 +180,106 @@ impl<T> MemoryEditor<T> {
             });
     }
 
+    fn draw_memory_values(&mut self, memory: &mut T, address_space: &Range<usize>, mut ui: &mut Ui, start_address: usize) {
+        let mut frame_data = &mut self.frame_data;
+        let options = &self.options;
+        let read_function = self.read_function;
+        let write_function = &self.write_function;
+        let read_only = self.read_only;
+
+        for grid_column in 0..options.column_count.div_ceil(&8) {
+            ui.columns((options.column_count - 8 * grid_column).min(8), |columns| {
+                let start_address = start_address + 8 * grid_column;
+                for (i, column) in columns.iter_mut().enumerate() {
+                    let memory_address = start_address + i;
+
+                    if !address_space.contains(&memory_address) {
+                        break;
+                    }
+
+                    let mem_val: u8 = read_function(memory, memory_address);
+
+                    let text_colour = if options.show_zero_colour && mem_val == 0 {
+                        options.zero_colour
+                    } else {
+                        column.style().visuals.text_color()
+                    };
+
+                    let mut label_text = format!("{:02X}", mem_val);
+
+                    // For Editing
+                    if let Some(address) = frame_data.selected_address {
+                        if !read_only && address == memory_address {
+                            let response = column.add(TextEdit::singleline(&mut frame_data.selected_address_string).text_style(options.memory_editor_text_style).desired_width(0.0));
+                            if frame_data.selected_address_request_focus {
+                                frame_data.selected_address_request_focus = false;
+                                column.memory().request_kb_focus(response.id);
+                            }
+
+                            // Filter out any non Hex-Digit, doesn't seem to be a method in TextEdit for this.
+                            frame_data.selected_address_string.retain(|c| c.is_ascii_hexdigit());
+
+                            // Don't want more than 2 digits
+                            if frame_data.selected_address_string.chars().count() >= 2 {
+                                let next_address = memory_address + 1;
+                                let new_value = u8::from_str_radix(frame_data.selected_address_string.as_str(), 16);
+
+                                if let Ok(value) = new_value {
+                                    // We asserted it exists, thus save to unwrap.
+                                    write_function.unwrap()(memory, memory_address, value);
+                                }
+
+                                if address_space.contains(&next_address) {
+                                    frame_data.selected_address = next_address.into();
+                                    frame_data.selected_address_request_focus = true;
+                                    frame_data.selected_address_string.clear();//format!("{:02X}", read_function(memory, next_address))
+                                } else {
+                                    frame_data.selected_address = None;
+                                }
+                            }
+
+                            // We automatically write the value when there is a valid u8, so discard otherwise.
+                            if response.lost_kb_focus {
+                                frame_data.selected_address_string.clear();
+                                frame_data.selected_address = None;
+                            }
+                            continue;
+                        }
+                    }
+                    // Read only values.
+                    let response = column
+                        .add(Label::new(label_text).text_color(text_colour).text_style(options.memory_editor_text_style));
+                    if response.clicked {
+                        frame_data.selected_address = Some(memory_address);
+                        frame_data.selected_address_request_focus = true;
+                    }
+                }
+            });
+        }
+    }
+
+    fn draw_ascii_sidebar(&mut self, ui: &mut Ui, memory: &mut T, start_address: usize, address_space: &Range<usize>) {
+        let options = &self.options;
+        // Not pretty atm, needs a better method: TODO
+        ui.horizontal(|ui| {
+            ui.add(egui::Separator::new().vertical().spacing(3.0));
+            ui.style_mut().spacing.item_spacing.x = 0.0;
+            ui.columns(options.column_count, |columns| {
+                for (i, column) in columns.iter_mut().enumerate() {
+                    let memory_address = start_address + i;
+
+                    if !address_space.contains(&memory_address) {
+                        break;
+                    }
+
+                    let mem_val: u8 = (self.read_function)(memory, memory_address);
+                    let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
+                    column.add(egui::Label::new(character).text_style(options.memory_editor_ascii_text_style));
+                }
+            });
+        });
+    }
+
     /// Return the line height for the current provided `Ui` and selected `TextStyle`s
     fn get_line_height(&self, ui: &mut Ui) -> f32 {
         let address_size = Label::new("##invisible").text_style(self.options.memory_editor_address_text_style).layout(ui).size.y;
@@ -287,6 +293,8 @@ impl<T> MemoryEditor<T> {
     fn shrink_window_ui(&self, ui: &mut Ui) {
         ui.set_max_width(ui.min_rect().width().max(self.frame_data.previous_frame_editor_width));
     }
+
+    // ** Builder methods **
 
     /// Set the window title, only relevant if using the `window_ui()` call.
     pub fn with_window_title(mut self, title: impl Into<String>) -> Self {
