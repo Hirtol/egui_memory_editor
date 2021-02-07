@@ -75,6 +75,8 @@ pub struct MemoryEditorOptions {
     pub memory_editor_ascii_text_style: TextStyle,
     pub(crate) memory_range_combo_box_enabled: bool,
     pub(crate) selected_address_range: String,
+    pub(crate) goto_address_string: String,
+    pub(crate) goto_address: Option<usize>,
 }
 
 impl Default for MemoryEditorOptions {
@@ -93,6 +95,8 @@ impl Default for MemoryEditorOptions {
             memory_editor_ascii_text_style: TextStyle::Monospace,
             memory_range_combo_box_enabled: false,
             selected_address_range: DEFAULT_RANGE_NAME.to_string(),
+            goto_address_string: "".to_string(),
+            goto_address: None,
         }
     }
 }

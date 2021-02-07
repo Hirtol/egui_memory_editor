@@ -2,6 +2,7 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 
 use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
+use egui::Event::Key;
 
 use crate::option_data::{BetweenFrameUiData, DataFormatType, Endianness, MemoryEditorOptions};
 
@@ -113,7 +114,8 @@ impl<T> MemoryEditor<T> {
         // Memory Editor Part.
         let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
-        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
+        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).with_start_line(std::mem::take(&mut self.options.goto_address))
+            .show(ui, |ui, line_range| {
             egui::Grid::new("mem_edit_grid")
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
@@ -155,6 +157,8 @@ impl<T> MemoryEditor<T> {
             column_count,
             memory_range_combo_box_enabled,
             selected_address_range,
+            goto_address_string,
+            goto_address,
             ..
         } = &mut self.options;
 
@@ -184,7 +188,18 @@ impl<T> MemoryEditor<T> {
                     *column_count = columns_u8 as usize;
 
                     // Goto address
+                    let response = ui.add(egui::TextEdit::singleline(goto_address_string).hint_text("0000"))
+                        .on_hover_text("Goto an address, can be written as either 0xAA or AA");
+                    // We check for address_ranges > 1 so should be safe to unwrap in *most* circumstances.
+                    ui.label(format!("Range: {:#X?}", address_ranges.get(selected_address_range).unwrap()));
 
+                    if response.lost_kb_focus() && ui.input().key_pressed(egui::Key::Enter) {
+                        if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
+                            *goto_address_string = goto_address_string[2..].to_string();
+                        }
+                        let address = usize::from_str_radix(goto_address_string, 16);
+                        *goto_address = address.ok().map(|addr| addr / *column_count);
+                    }
 
                     ui.end_row();
 
@@ -192,7 +207,7 @@ impl<T> MemoryEditor<T> {
                     ui.checkbox(show_ascii_sidebar, "Show ASCII")
                         .on_hover_text(format!("{} the ASCII representation view", if *show_ascii_sidebar { "Disable" } else { "Enable" }));
                     ui.checkbox(show_zero_colour, "Custom zero colour")
-                        .on_hover_text("If enabled '0' will be coloured differently");
+                        .on_hover_text("If enabled memory values of '0x00' will be coloured differently");
                 });
                 egui::CollapsingHeader::new("⛃ Data Preview").default_open(false).show(ui, |ui| {
                     egui::Grid::new("data_preview_grid").show(ui, |ui| {
@@ -222,6 +237,7 @@ impl<T> MemoryEditor<T> {
         let options = &self.options;
         let read_function = self.read_function;
         let write_function = &self.write_function;
+        let mut read_only = frame_data.selected_address.is_none() || write_function.is_none();
 
         for grid_column in 0..(options.column_count + 7) / 8 { // div_ceil
             let start_address = start_address + 8 * grid_column;
@@ -247,57 +263,55 @@ impl<T> MemoryEditor<T> {
                     let label_text = format!("{:02X}", mem_val);
 
                     // For Editing
-                    if let (Some(address), Some(write_function)) = (frame_data.selected_address, write_function) {
-                        if address == memory_address {
-                            let response = column.with_layout(Layout::left_to_right(), |ui| {
-                                ui.add(TextEdit::singleline(&mut frame_data.selected_address_string)
-                                    .text_style(options.memory_editor_text_style)
-                                    .hint_text(label_text))
-                            });
-                            if frame_data.selected_address_request_focus {
-                                frame_data.selected_address_request_focus = false;
-                                column.memory().request_kb_focus(response.inner.id);
+                    if !read_only && frame_data.selected_address.unwrap() == memory_address {
+                        let response = column.with_layout(Layout::left_to_right(), |ui| {
+                            ui.add(TextEdit::singleline(&mut frame_data.selected_address_string)
+                                .text_style(options.memory_editor_text_style)
+                                .hint_text(label_text))
+                        });
+                        if frame_data.selected_address_request_focus {
+                            frame_data.selected_address_request_focus = false;
+                            column.memory().request_kb_focus(response.inner.id);
+                        }
+
+                        // Filter out any non Hex-Digit, doesn't seem to be a method in TextEdit for this.
+                        frame_data.selected_address_string.retain(|c| c.is_ascii_hexdigit());
+
+                        // Don't want more than 2 digits
+                        if frame_data.selected_address_string.chars().count() >= 2 {
+                            let next_address = memory_address + 1;
+                            let new_value = u8::from_str_radix(frame_data.selected_address_string.as_str(), 16);
+
+                            if let Ok(value) = new_value {
+                                write_function.unwrap()(memory, memory_address, value);
                             }
 
-                            // Filter out any non Hex-Digit, doesn't seem to be a method in TextEdit for this.
-                            frame_data.selected_address_string.retain(|c| c.is_ascii_hexdigit());
+                            frame_data.selected_address_string.clear();
 
-                            // Don't want more than 2 digits
-                            if frame_data.selected_address_string.chars().count() >= 2 {
-                                let next_address = memory_address + 1;
-                                let new_value = u8::from_str_radix(frame_data.selected_address_string.as_str(), 16);
-
-                                if let Ok(value) = new_value {
-                                    write_function(memory, memory_address, value);
-                                }
-
-                                frame_data.selected_address_string.clear();
-
-                                if address_space.contains(&next_address) {
-                                    frame_data.selected_address = next_address.into();
-                                    frame_data.selected_address_request_focus = true;
-                                } else {
-                                    frame_data.selected_address = None;
-                                }
-                            }
-
-                            // We automatically write the value when there is a valid u8, so discard otherwise.
-                            if response.inner.lost_kb_focus() {
-                                frame_data.selected_address_string.clear();
+                            if address_space.contains(&next_address) {
+                                frame_data.selected_address = next_address.into();
+                                frame_data.selected_address_request_focus = true;
+                            } else {
                                 frame_data.selected_address = None;
                             }
-                            continue;
                         }
-                    }
-                    // Read-only values.
-                    let response = column.with_layout(Layout::bottom_up(Align::Center), |ui| {
-                        ui.add(Label::new(label_text)
-                                   .text_color(text_colour)
-                                   .text_style(options.memory_editor_text_style),)
-                    });
-                    if response.inner.clicked() {
-                        frame_data.selected_address = Some(memory_address);
-                        frame_data.selected_address_request_focus = true;
+
+                        // We automatically write the value when there is a valid u8, so discard otherwise.
+                        if response.inner.lost_kb_focus() {
+                            frame_data.selected_address_string.clear();
+                            frame_data.selected_address = None;
+                        }
+                    } else {
+                        // Read-only values.
+                        let response = column.with_layout(Layout::bottom_up(Align::Center), |ui| {
+                            ui.add(Label::new(label_text)
+                                       .text_color(text_colour)
+                                       .text_style(options.memory_editor_text_style), )
+                        });
+                        if response.inner.clicked() {
+                            frame_data.selected_address = Some(memory_address);
+                            frame_data.selected_address_request_focus = true;
+                        }
                     }
                 }
             });

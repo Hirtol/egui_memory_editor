@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use egui::{ScrollArea, Ui, Vec2};
+use egui::{ScrollArea, Ui, Vec2, Align};
 
 use crate::egui_utilities::*;
 
@@ -46,10 +46,16 @@ impl ClippedScrollArea {
 
     /// Set the vertical scroll offset position.
     ///
-    /// See also: [`Ui::scroll_to_cursor`](egui::ui::Ui::scroll_to_cursor) and
+    /// See also: [`Ui::scroll_to_cursor`](egui::Ui::scroll_to_cursor) and
     /// [`Response::scroll_to_me`](egui::Response::scroll_to_me)
     pub fn scroll_offset(mut self, offset: f32) -> Self {
         self.scroll_area = self.scroll_area.scroll_offset(offset);
+        self
+    }
+
+    /// If `start_line` is [`Option::Some`] then the clipper will move to that line instead of the current scroll.
+    pub fn with_start_line(mut self, start_line: Option<usize>) -> Self {
+        self.clipper = self.clipper.with_start_line(start_line);
         self
     }
 }
@@ -61,6 +67,7 @@ pub struct ScrollAreaClipper {
     theoretical_max_height: f64,
     max_lines: usize,
     line_height: f32,
+    start_line: Option<usize>,
 }
 
 impl ScrollAreaClipper {
@@ -69,13 +76,14 @@ impl ScrollAreaClipper {
             theoretical_max_height: max_lines as f64 * line_height as f64,
             max_lines,
             line_height,
+            start_line: None
         }
     }
 
     /// Start using the `ScrollAreaClipper`. Automatically call the relevant `begin()` and `finish` functions.
     ///
     /// The `add_contents` provides a `Ui` object, as well as a non-inclusive `Range<usize>` of the current visible lines.
-    pub fn show<R>(self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui, Range<usize>) -> R) -> R {
+    pub fn show<R>(mut self, ui: &mut Ui, add_contents: impl FnOnce(&mut Ui, Range<usize>) -> R) -> R {
         self.begin(ui);
         let response = add_contents(ui, self.get_current_line_range(ui));
         self.finish(ui);
@@ -88,19 +96,31 @@ impl ScrollAreaClipper {
     pub fn begin(&self, ui: &mut Ui) {
         let start = self.display_start_f32(ui);
         ui.allocate_space(Vec2::new(0.0, start.min(self.theoretical_max_height as f32)));
+        // Need to manually scroll to the start line
+        if self.start_line.is_some() {
+            ui.scroll_to_cursor(Align::TOP);
+        }
     }
 
     /// Pad out the remaining space until the `max_lines` to ensure a consistent scroller length.
     ///
     /// Should be used as the last `Ui` function in a `ScrollArea`
-    pub fn finish(&self, ui: &mut Ui) {
+    pub fn finish(&mut self, ui: &mut Ui) {
         let scroll_y = get_current_scroll(ui).0 + ui.clip_rect().max.y;
+        // We know we'll now have completed our obligation to draw at the start line, so remove it.
+        self.start_line = None;
         // Always leave a little extra white space on the bottom to ensure the last line is visible.
         ui.allocate_space(Vec2::new(0.0, (self.theoretical_max_height as f32 - scroll_y).max(5.0)));
     }
 
     pub fn get_current_line_range(&self, ui: &Ui) -> Range<usize> {
         self.display_line_start(ui)..self.display_line_end(ui)
+    }
+
+    /// If `start_line` is [`Option::Some`] then the clipper will move to that line instead of the current scroll.
+    pub fn with_start_line(mut self, start_line: Option<usize>) -> Self {
+        self.start_line = start_line;
+        self
     }
 
     fn display_line_start(&self, ui: &Ui) -> usize {
@@ -114,7 +134,11 @@ impl ScrollAreaClipper {
     }
 
     fn display_start_f32(&self, ui: &Ui) -> f32 {
-        let (scroll_y, _) = get_current_scroll(ui);
-        scroll_y
+        if let Some(&line) = self.start_line.as_ref() {
+            self.line_height * line as f32
+        } else {
+            let (scroll_y, _) = get_current_scroll(ui);
+            scroll_y
+        }
     }
 }
