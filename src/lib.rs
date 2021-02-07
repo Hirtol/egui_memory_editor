@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 
 use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
-use num::Integer;
 
 use crate::option_data::{BetweenFrameUiData, DataFormatType, Endianness, MemoryEditorOptions};
 
@@ -112,7 +111,7 @@ impl<T> MemoryEditor<T> {
         // This is janky, but can't think of a better way.
         let address_characters = format!("{:X}", address_space.end).chars().count();
         // Memory Editor Part.
-        let max_lines = address_space.len().div_ceil(&column_count);
+        let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).show(ui, |ui, line_range| {
             egui::Grid::new("mem_edit_grid")
@@ -131,6 +130,7 @@ impl<T> MemoryEditor<T> {
 
                         // Render the memory values
                         self.draw_memory_values(ui, memory, start_address, &address_space);
+
 
                         // Optional ASCII side
                         if show_ascii_sidebar {
@@ -159,7 +159,6 @@ impl<T> MemoryEditor<T> {
         } = &mut self.options;
 
         let address_ranges = &self.address_ranges;
-        let frame_editor_width = self.frame_data.previous_frame_editor_width;
 
         egui::CollapsingHeader::new("🛠 Options")
             .default_open(true)
@@ -221,9 +220,12 @@ impl<T> MemoryEditor<T> {
         let read_function = self.read_function;
         let write_function = &self.write_function;
 
-        for grid_column in 0..options.column_count.div_ceil(&8) {
+        for grid_column in 0..(options.column_count + 7) / 8 { // div_ceil
+            let start_address = start_address + 8 * grid_column;
+            // We use columns here instead of horizontal_for_text() to keep consistent spacing for non-monospace fonts.
+            // When fonts are more customizable (e.g, we can accept a `Font` as a setting instead of `TextStyle` I'd like
+            // to switch to horizontal_for_text() as we can then just assume a decent Monospace font provided by the user.
             ui.columns((options.column_count - 8 * grid_column).min(8), |columns| {
-                let start_address = start_address + 8 * grid_column;
                 for (i, column) in columns.iter_mut().enumerate() {
                     let memory_address = start_address + i;
 
@@ -285,7 +287,7 @@ impl<T> MemoryEditor<T> {
                             continue;
                         }
                     }
-                    // Read only values.
+                    // Read-only values.
                     let response = column.add(
                         Label::new(label_text)
                             .text_color(text_colour)
