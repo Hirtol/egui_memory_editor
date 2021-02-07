@@ -60,20 +60,20 @@ impl Default for DataPreviewOptions {
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct MemoryEditorOptions {
-    /// Used to check if the window is open, if you don't use the `window_ui()` call then this is irrelevant.
+    /// Used to check if the window is open, if you don't use the [`crate::MemoryEditor::window_ui`] call then this is irrelevant.
     pub is_open: bool,
     pub show_ascii_sidebar: bool,
     pub show_zero_colour: bool,
     pub data_preview_options: DataPreviewOptions,
     pub column_count: usize,
-    /// A custom colour for `0`. By default will be gray.
+    /// A custom colour for `0x00`. By default will be grey.
     pub zero_colour: Color32,
     pub address_text_colour: Color32,
     pub highlight_colour: Color32,
     pub memory_editor_text_style: TextStyle,
     pub memory_editor_address_text_style: TextStyle,
     pub memory_editor_ascii_text_style: TextStyle,
-    pub(crate) combo_box_enabled: bool,
+    pub(crate) memory_range_combo_box_enabled: bool,
     pub(crate) selected_address_range: String,
 }
 
@@ -91,7 +91,7 @@ impl Default for MemoryEditorOptions {
             memory_editor_text_style: TextStyle::Heading, // Non-monospace default as I personally find it too small, and columns provide close-enough alignment.
             memory_editor_address_text_style: TextStyle::Heading,
             memory_editor_ascii_text_style: TextStyle::Monospace,
-            combo_box_enabled: false,
+            memory_range_combo_box_enabled: false,
             selected_address_range: DEFAULT_RANGE_NAME.to_string(),
         }
     }

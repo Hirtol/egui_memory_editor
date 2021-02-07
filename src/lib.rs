@@ -153,8 +153,8 @@ impl<T> MemoryEditor<T> {
             show_ascii_sidebar,
             show_zero_colour,
             column_count,
-            combo_box_enabled,
-            selected_address_range: combo_box_value_selected,
+            memory_range_combo_box_enabled,
+            selected_address_range,
             ..
         } = &mut self.options;
 
@@ -165,10 +165,10 @@ impl<T> MemoryEditor<T> {
             .show(ui, |ui| {
                 egui::Grid::new("options_grid").show(ui, |ui| {
                     // Memory region selection
-                    if *combo_box_enabled {
-                        egui::combo_box_with_label(ui, "Memory Region", combo_box_value_selected.clone(), |ui| {
+                    if *memory_range_combo_box_enabled {
+                        egui::combo_box_with_label(ui, "Memory Region", selected_address_range.clone(), |ui| {
                             address_ranges.iter().for_each(|(range_name, _)| {
-                                ui.selectable_value(combo_box_value_selected, range_name.clone(), range_name);
+                                ui.selectable_value(selected_address_range, range_name.clone(), range_name);
                             });
                         });
                     }
@@ -182,6 +182,9 @@ impl<T> MemoryEditor<T> {
                             .speed(0.5),
                     );
                     *column_count = columns_u8 as usize;
+
+                    // Goto address
+
 
                     ui.end_row();
 
@@ -369,7 +372,7 @@ impl<T> MemoryEditor<T> {
     /// The UI will query your set `read_function` with the values within this `Range`
     pub fn with_address_range(mut self, range_name: impl Into<String>, address_range: Range<usize>) -> Self {
         self.address_ranges.insert(range_name.into(), address_range);
-        self.options.combo_box_enabled = self.address_ranges.len() > 1;
+        self.options.memory_range_combo_box_enabled = self.address_ranges.len() > 1;
         if let Some((name, _)) = self.address_ranges.iter().next() {
             self.options.selected_address_range = name.clone();
         }
