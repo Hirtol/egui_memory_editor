@@ -55,7 +55,7 @@ impl ClippedScrollArea {
 }
 
 /// A simple utility to make it easier to only insert/draw `Ui` elements that will actually be visible in the current
-///  `ScrollArea`.
+///  `ScrollArea` while maintaining the size of said area.
 #[derive(Debug, Copy, Clone)]
 pub struct ScrollAreaClipper {
     theoretical_max_height: f64,

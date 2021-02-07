@@ -38,9 +38,6 @@ pub struct MemoryEditor<T> {
     ///
     /// Note this *currently* only supports a range that has a max of `2^24`, due to `ScrollArea` limitations.
     address_ranges: BTreeMap<String, Range<usize>>,
-    /// When `true` will disallow any edits, ensuring the `write_function` will never be called.
-    /// The latter therefore doesn't need to be set.
-    read_only: bool,
     /// A collection of options relevant for the `MemoryEditor` window.
     /// Can optionally be serialized/deserialized with `serde`
     pub options: MemoryEditorOptions,
@@ -49,13 +46,25 @@ pub struct MemoryEditor<T> {
 }
 
 impl<T> MemoryEditor<T> {
+    /// Create the MemoryEditor, which should be kept in memory between frames.
+    ///
+    /// The `read_function` should return one `u8` value from the object which you provide in
+    /// either the [window_ui()][w] or the [draw_viewer_contents][d] method.
+    ///
+    /// ```
+    /// # use egui_memory_viewer::MemoryEditor;
+    /// let mut memory_base = [0xFF; 0xFF];
+    /// let mut memory_editor: MemoryEditor<&[u8]> = MemoryEditor::new(|memory, address| memory[address]);
+    /// ```
+    ///
+    /// [w]: MemoryEditor::window_ui()
+    /// [d]: MemoryEditor::draw_viewer_contents()
     pub fn new(read_function: ReadFunction<T>) -> Self {
         MemoryEditor {
             window_name: "Memory Editor".to_string(),
             read_function,
             write_function: None,
             address_ranges: BTreeMap::new(),
-            read_only: false,
             options: Default::default(),
             frame_data: Default::default(),
         }
@@ -86,7 +95,6 @@ impl<T> MemoryEditor<T> {
     /// Use `window_ui()` if you want to have a window with the contents instead.
     pub fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
         assert!(self.address_ranges.len() > 0, "At least one address range needs to be added to render the contents!");
-        assert!(self.write_function.is_some() || self.read_only, "The write function needs to be set if not in read only mode!");
 
         self.draw_options_area(ui);
 
@@ -185,7 +193,6 @@ impl<T> MemoryEditor<T> {
         let options = &self.options;
         let read_function = self.read_function;
         let write_function = &self.write_function;
-        let read_only = self.read_only;
 
         for grid_column in 0..options.column_count.div_ceil(&8) {
             ui.columns((options.column_count - 8 * grid_column).min(8), |columns| {
@@ -208,8 +215,8 @@ impl<T> MemoryEditor<T> {
                     let mut label_text = format!("{:02X}", mem_val);
 
                     // For Editing
-                    if let Some(address) = frame_data.selected_address {
-                        if !read_only && address == memory_address {
+                    if let (Some(address), Some(write_function)) = (frame_data.selected_address, write_function) {
+                        if address == memory_address {
                             let response = column.add(TextEdit::singleline(&mut frame_data.selected_address_string).text_style(options.memory_editor_text_style).desired_width(0.0));
                             if frame_data.selected_address_request_focus {
                                 frame_data.selected_address_request_focus = false;
@@ -226,7 +233,7 @@ impl<T> MemoryEditor<T> {
 
                                 if let Ok(value) = new_value {
                                     // We asserted it exists, thus save to unwrap.
-                                    write_function.unwrap()(memory, memory_address, value);
+                                    write_function(memory, memory_address, value);
                                 }
 
                                 if address_space.contains(&next_address) {
@@ -304,7 +311,7 @@ impl<T> MemoryEditor<T> {
 
     /// Set the function used to write to the provided object `T`.
     ///
-    /// This function is only necessary if `read_only` is `false`.
+    /// This will give the UI write capabilities, and will therefore no longer be `read_only`.
     pub fn with_write_function(mut self, write_function: WriteFunction<T>) -> Self {
         self.write_function = Some(write_function);
         self
@@ -323,13 +330,6 @@ impl<T> MemoryEditor<T> {
         if let Some((name, _)) = self.address_ranges.iter().next() {
             self.options.selected_address_range = name.clone();
         }
-        self
-    }
-
-    /// If set to `true` the UI will not allow any manual memory edits, and thus the `write_function` will never be called
-    /// (and therefore doesn't need to be set).
-    pub fn with_read_only(mut self, read_only: bool) -> Self {
-        self.read_only = read_only;
         self
     }
 
