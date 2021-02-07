@@ -2,14 +2,20 @@ use egui::{Color32, TextStyle};
 
 pub(crate) const DEFAULT_RANGE_NAME: &str = "DEFAULT";
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub enum Endianness {
     Big,
     Little,
 }
 
-#[derive(Copy, Clone, Debug)]
+impl Endianness {
+    pub fn iter() -> impl Iterator<Item=Endianness> {
+        vec![Endianness::Big, Endianness::Little].into_iter()
+    }
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub enum DataFormatType {
     U8,
@@ -22,6 +28,13 @@ pub enum DataFormatType {
     I64,
     F32,
     F64,
+}
+
+impl DataFormatType {
+    pub fn iter() -> impl Iterator<Item=DataFormatType> {
+        use DataFormatType::*;
+        vec![U8, U16, U32, U64, I8, I16, I32, I64, F32, F64].into_iter()
+    }
 }
 
 #[derive(Copy, Clone, Debug)]

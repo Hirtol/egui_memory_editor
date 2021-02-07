@@ -4,7 +4,7 @@ use std::ops::Range;
 use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
 use num::Integer;
 
-use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions};
+use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions, Endianness, DataFormatType};
 
 mod egui_utilities;
 mod list_clipper;
@@ -163,34 +163,60 @@ impl<T> MemoryEditor<T> {
         egui::CollapsingHeader::new("Options")
             .default_open(true)
             .show(ui, |ui| {
-                egui::Grid::new("options_grid").show(ui, |ui| {
-                    // Memory region selection
-                    if *combo_box_enabled {
-                        egui::combo_box_with_label(ui, "Memory Region", combo_box_value_selected.clone(), |ui| {
-                            address_ranges.iter().for_each(|(range_name, _)| {
-                                ui.selectable_value(combo_box_value_selected, range_name.clone(), range_name);
+                ui.horizontal(|ui| {
+                    egui::Grid::new("options_grid").show(ui, |ui| {
+                        // Memory region selection
+                        if *combo_box_enabled {
+                            egui::combo_box_with_label(ui, "Memory Region", combo_box_value_selected.clone(), |ui| {
+                                address_ranges.iter().for_each(|(range_name, _)| {
+                                    ui.selectable_value(combo_box_value_selected, range_name.clone(), range_name);
+                                });
                             });
+                        }
+
+                        // Column dragger
+                        let mut columns = *column_count as u8;
+                        ui.add(
+                            egui::DragValue::u8(&mut columns)
+                                .clamp_range(1.0..=64.0)
+                                .prefix("Columns: ")
+                                .speed(0.5),
+                        );
+                        *column_count = columns as usize;
+
+                        ui.end_row();
+
+                        // Checkboxes
+                        ui.checkbox(show_ascii_sidebar, "Show ASCII")
+                            .on_hover_text(format!("{} the ASCII representation view", if *show_ascii_sidebar { "Disable" } else { "Enable" }));
+                        ui.checkbox(show_zero_colour, "Custom zero colour")
+                            .on_hover_text("If enabled '0' will be coloured differently");
+                    });
+
+                    ui.add(egui::Separator::new().vertical());
+
+                    egui::Grid::new("data_preview_grid").show(ui, |ui| {
+                        // Format selection
+                        egui::combo_box_with_label(ui, "Endianness", format!("{:?}", data_preview_options.selected_endianness), |ui| {
+                            for endian in Endianness::iter() {
+                                ui.selectable_value(&mut data_preview_options.selected_endianness, endian, format!("{:?}", endian));
+                            }
                         });
-                    }
+                        egui::combo_box_with_label(ui, "Format", format!("{:?}", data_preview_options.selected_data_format), |ui| {
+                            for format in DataFormatType::iter() {
+                                ui.selectable_value(&mut data_preview_options.selected_data_format, format, format!("{:?}", format));
+                            }
+                        });
 
-                    // Column dragger
-                    let mut columns = *column_count as u8;
-                    ui.add(
-                        egui::DragValue::u8(&mut columns)
-                            .range(1.0..=64.0)
-                            .prefix("Columns: ")
-                            .speed(0.5),
-                    );
-                    *column_count = columns as usize;
+                        ui.end_row();
 
-                    ui.end_row();
+                        // Display
 
-                    // Checkboxes
-                    ui.checkbox(show_ascii_sidebar, "Show ASCII")
-                        .on_hover_text(format!("{} the ASCII representation view", if *show_ascii_sidebar { "Disable" } else { "Enable" }));
-                    ui.checkbox(show_zero_colour, "Custom zero colour")
-                        .on_hover_text("If enabled '0' will be coloured differently");
+                        ui.label("Value: ");
+
+                    })
                 });
+
             });
     }
 
