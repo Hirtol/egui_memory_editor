@@ -3,7 +3,8 @@ use std::ops::Range;
 
 use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
 
-use crate::option_data::{BetweenFrameUiData, DataFormatType, Endianness, MemoryEditorOptions};
+use crate::option_data::{BetweenFrameUiData, DataFormatType, DataPreviewOptions, Endianness, MemoryEditorOptions};
+use std::convert::TryInto;
 
 mod egui_utilities;
 mod list_clipper;
@@ -91,7 +92,7 @@ impl<T> MemoryEditor<T> {
     pub fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
         assert!(self.address_ranges.len() > 0, "At least one address range needs to be added to render the contents!");
 
-        self.draw_options_area(ui);
+        self.draw_options_area(ui, memory);
 
         ui.separator();
 
@@ -114,39 +115,39 @@ impl<T> MemoryEditor<T> {
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).with_start_line(std::mem::take(&mut self.options.goto_address_line))
             .show(ui, |ui, line_range| {
-            egui::Grid::new("mem_edit_grid") //TODO: Tryout columns instead of Grid, then replace all other columns with normal text or horizontal_text.
-                .striped(true)
-                .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
-                .show(ui, |ui| {
-                    ui.style_mut().wrap = Some(false);
-                    ui.style_mut().spacing.item_spacing.x = 3.0;
+                egui::Grid::new("mem_edit_grid") //TODO: Tryout columns instead of Grid, then replace all other columns with normal text or horizontal_text.
+                    .striped(true)
+                    .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
+                    .show(ui, |ui| {
+                        ui.style_mut().wrap = Some(false);
+                        ui.style_mut().spacing.item_spacing.x = 3.0;
 
-                    for start_row in line_range.clone() {
-                        let start_address = address_space.start + (start_row * column_count);
-                        ui.add(
-                            Label::new(format!("0x{:01$X}", start_address, address_characters))
-                                .text_color(address_text_colour)
-                                .text_style(memory_editor_address_text_style),
-                        );
+                        for start_row in line_range.clone() {
+                            let start_address = address_space.start + (start_row * column_count);
+                            ui.add(
+                                Label::new(format!("0x{:01$X}", start_address, address_characters))
+                                    .text_color(address_text_colour)
+                                    .text_style(memory_editor_address_text_style),
+                            );
 
-                        // Render the memory values
-                        self.draw_memory_values(ui, memory, start_address, &address_space);
+                            // Render the memory values
+                            self.draw_memory_values(ui, memory, start_address, &address_space);
 
-                        // Optional ASCII side
-                        if show_ascii_sidebar {
-                            self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
+                            // Optional ASCII side
+                            if show_ascii_sidebar {
+                                self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
+                            }
+
+                            ui.end_row();
                         }
-
-                        ui.end_row();
-                    }
-                });
-            // After we've drawn the area we want to resize to we want to save this size for the next frame.
-            // In case it has became smaller we'll shrink the window.
-            self.frame_data.previous_frame_editor_width = ui.min_rect().width();
-        });
+                    });
+                // After we've drawn the area we want to resize to we want to save this size for the next frame.
+                // In case it has became smaller we'll shrink the window.
+                self.frame_data.previous_frame_editor_width = ui.min_rect().width();
+            });
     }
 
-    fn draw_options_area(&mut self, ui: &mut Ui) {
+    fn draw_options_area(&mut self, ui: &mut Ui, memory: &mut T) {
         let MemoryEditorOptions {
             data_preview_options,
             show_ascii_sidebar,
@@ -159,6 +160,7 @@ impl<T> MemoryEditor<T> {
             ..
         } = &mut self.options;
 
+        let read_function = self.read_function;
         let address_ranges = &self.address_ranges;
         let mut frame_data = &mut self.frame_data;
         // We check for address_ranges > 1 so should be safe to unwrap in *most* circumstances.
@@ -216,6 +218,7 @@ impl<T> MemoryEditor<T> {
                     ui.checkbox(show_zero_colour, "Custom zero colour")
                         .on_hover_text("If enabled memory values of '0x00' will be coloured differently");
                 });
+                // Data Preview
                 egui::CollapsingHeader::new("⛃ Data Preview").default_open(false).show(ui, |ui| {
                     egui::Grid::new("data_preview_grid").show(ui, |ui| {
                         // Format selection
@@ -232,11 +235,62 @@ impl<T> MemoryEditor<T> {
 
                         ui.end_row();
 
-                        // Display
-                        ui.label("Value: ");
+                        // Read and display the value
+                        let address_to_read = frame_data.selected_highlight_address;
+                        ui.label(format!("Value at {:#X} (decimal): ", address_to_read.unwrap_or_default()));
+
+                        if let Some(address) = address_to_read {
+                            let value = Self::read_mem_value(read_function, address, *data_preview_options, current_address_range, memory);
+                            ui.label(value);
+                        }
                     });
                 })
             });
+    }
+
+    fn draw_data_preview(&mut self) {}
+
+    pub fn slice_to_decimal_string(data_preview: DataPreviewOptions, bytes: &[u8]) -> String {
+        match data_preview.selected_endianness {
+            Endianness::Big => match data_preview.selected_data_format {
+                DataFormatType::U8 => u8::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::U16 => u16::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::U32 => u32::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::U64 => u64::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::I8 => i8::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::I16 => i16::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::I32 => i32::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::I64 => i64::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::F32 => f32::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::F64 => f64::from_be_bytes(bytes.try_into().unwrap()).to_string(),
+            }
+            Endianness::Little => match data_preview.selected_data_format {
+                DataFormatType::U8 => u8::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::U16 => u16::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::U32 => u32::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::U64 => u64::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::I8 => i8::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::I16 => i16::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::I32 => i32::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::I64 => i64::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::F32 => f32::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+                DataFormatType::F64 => f64::from_le_bytes(bytes.try_into().unwrap()).to_string(),
+            }
+        }
+    }
+
+    fn read_mem_value(read_function: ReadFunction<T>, address: usize, data_preview: DataPreviewOptions, address_space: &Range<usize>, memory: &mut T) -> String {
+        let bytes = (0..data_preview.selected_data_format.bytes_to_read())
+            .filter_map(|i| {
+                let read_address = address + i;
+                if address_space.contains(&read_address) {
+                    Some(read_function(memory, read_address))
+                } else {
+                    None
+                }
+            }).collect::<Vec<u8>>();
+
+        Self::slice_to_decimal_string(data_preview, &bytes)
     }
 
     fn draw_memory_values(&mut self, ui: &mut Ui, memory: &mut T, start_address: usize, address_space: &Range<usize>) {

@@ -35,6 +35,16 @@ impl DataFormatType {
         use DataFormatType::*;
         vec![U8, U16, U32, U64, I8, I16, I32, I64, F32, F64].into_iter()
     }
+
+    pub const fn bytes_to_read(&self) -> usize {
+        use DataFormatType::*;
+        match *self {
+            U8 | I8 => 1,
+            U16 | I16 => 2,
+            U32 | I32 | F32 => 4,
+            U64 | I64 | F64 => 8,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Debug)]
