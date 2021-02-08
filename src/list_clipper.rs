@@ -1,6 +1,6 @@
 use std::ops::Range;
 
-use egui::{ScrollArea, Ui, Vec2, Align};
+use egui::{Align, ScrollArea, Ui, Vec2};
 
 use crate::utilities::*;
 
@@ -76,7 +76,7 @@ impl ScrollAreaClipper {
             theoretical_max_height: max_lines as f64 * line_height as f64,
             max_lines,
             line_height,
-            start_line: None
+            start_line: None,
         }
     }
 

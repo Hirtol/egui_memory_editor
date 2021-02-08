@@ -1,8 +1,8 @@
+use crate::frame_history::FrameHistory;
+use eframe::egui::CtxRef;
 use eframe::epi;
 use eframe::epi::Frame;
-use eframe::egui::CtxRef;
 use egui_memory_editor::MemoryEditor;
-use crate::frame_history::FrameHistory;
 
 mod frame_history;
 
@@ -35,7 +35,7 @@ impl Default for App {
         App {
             mem_editor,
             memory: Default::default(),
-            fh: Default::default()
+            fh: Default::default(),
         }
     }
 }

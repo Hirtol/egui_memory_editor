@@ -1,5 +1,5 @@
+use crate::option_data::{DataFormatType, DataPreviewOptions, Endianness};
 use egui::Ui;
-use crate::option_data::{DataPreviewOptions, DataFormatType, Endianness};
 use std::convert::TryInto;
 
 /// Turn a provided slice into a decimal [`String`] representing it's value, interpretation is based on the provided
@@ -19,7 +19,7 @@ pub fn slice_to_decimal_string(data_preview: DataPreviewOptions, bytes: &[u8]) -
             DataFormatType::I64 => i64::from_be_bytes(bytes.try_into().unwrap()).to_string(),
             DataFormatType::F32 => f32::from_be_bytes(bytes.try_into().unwrap()).to_string(),
             DataFormatType::F64 => f64::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-        }
+        },
         Endianness::Little => match data_preview.selected_data_format {
             DataFormatType::U8 => u8::from_le_bytes(bytes.try_into().unwrap()).to_string(),
             DataFormatType::U16 => u16::from_le_bytes(bytes.try_into().unwrap()).to_string(),
@@ -31,7 +31,7 @@ pub fn slice_to_decimal_string(data_preview: DataPreviewOptions, bytes: &[u8]) -
             DataFormatType::I64 => i64::from_le_bytes(bytes.try_into().unwrap()).to_string(),
             DataFormatType::F32 => f32::from_le_bytes(bytes.try_into().unwrap()).to_string(),
             DataFormatType::F64 => f64::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-        }
+        },
     }
 }
 

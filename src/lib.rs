@@ -3,13 +3,12 @@ use std::ops::Range;
 
 use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
 
-use crate::option_data::{BetweenFrameUiData, DataFormatType, DataPreviewOptions, Endianness, MemoryEditorOptions};
-use std::convert::TryInto;
+use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions};
 
-mod utilities;
 mod list_clipper;
 pub mod option_data;
 mod option_ui;
+mod utilities;
 
 /// Reads a value present at the provided address in the object `T`.
 ///
@@ -98,7 +97,6 @@ impl<T> MemoryEditor<T> {
         ui.separator();
 
         let MemoryEditorOptions {
-            data_preview_options,
             show_ascii_sidebar,
             column_count,
             address_text_colour,
@@ -114,7 +112,8 @@ impl<T> MemoryEditor<T> {
         // Memory Editor Part.
         let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
-        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).with_start_line(std::mem::take(&mut self.frame_data.goto_address_line))
+        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height)
+            .with_start_line(std::mem::take(&mut self.frame_data.goto_address_line))
             .show(ui, |ui, line_range| {
                 egui::Grid::new("mem_edit_grid") //TODO: Tryout columns instead of Grid, then replace all other columns with normal text or horizontal_text.
                     .striped(true)
@@ -271,7 +270,9 @@ impl<T> MemoryEditor<T> {
                     let mut label = egui::Label::new(character).text_style(options.memory_editor_ascii_text_style);
 
                     if self.frame_data.should_highlight(memory_address) {
-                        label = label.background_color(column.visuals().code_bg_color).text_color(options.highlight_colour);
+                        label = label
+                            .background_color(column.visuals().code_bg_color)
+                            .text_color(options.highlight_colour);
                     }
                     column.with_layout(Layout::bottom_up(Align::Center), |ui| {
                         ui.add(label);

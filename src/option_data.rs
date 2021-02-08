@@ -8,7 +8,7 @@ pub enum Endianness {
 }
 
 impl Endianness {
-    pub fn iter() -> impl Iterator<Item=Endianness> {
+    pub fn iter() -> impl Iterator<Item = Endianness> {
         vec![Endianness::Big, Endianness::Little].into_iter()
     }
 }
@@ -29,7 +29,7 @@ pub enum DataFormatType {
 }
 
 impl DataFormatType {
-    pub fn iter() -> impl Iterator<Item=DataFormatType> {
+    pub fn iter() -> impl Iterator<Item = DataFormatType> {
         use DataFormatType::*;
         vec![U8, U16, U32, U64, I8, I16, I32, I64, F32, F64].into_iter()
     }
@@ -150,6 +150,7 @@ impl BetweenFrameUiData {
 
     #[inline]
     pub fn should_highlight(&self, address: usize) -> bool {
-        self.selected_highlight_address.map_or(false, |addr| addr == address) || self.selected_edit_address.map_or(false, |addr| addr == address)
+        self.selected_highlight_address.map_or(false, |addr| addr == address)
+            || self.selected_edit_address.map_or(false, |addr| addr == address)
     }
 }

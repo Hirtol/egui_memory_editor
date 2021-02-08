@@ -1,12 +1,17 @@
-use crate::{ReadFunction, MemoryEditor};
-use crate::option_data::{DataPreviewOptions, DataFormatType, Endianness};
 use std::ops::Range;
+
 use egui::Ui;
+
+use crate::{MemoryEditor, ReadFunction};
+use crate::option_data::{DataFormatType, DataPreviewOptions, Endianness};
 
 impl<T> MemoryEditor<T> {
     /// Draw the `Options` collapsing header with the main options and data preview hidden underneath.
     pub(crate) fn draw_options_area(&mut self, ui: &mut Ui, memory: &mut T) {
-        let current_address_range = self.address_ranges.get(&self.options.selected_address_range).unwrap().clone();
+        let current_address_range = self.address_ranges
+            .get(&self.options.selected_address_range)
+            .unwrap()
+            .clone();
 
         egui::CollapsingHeader::new("🛠 Options")
             .default_open(true)
@@ -59,7 +64,8 @@ impl<T> MemoryEditor<T> {
                 }
                 let address = usize::from_str_radix(goto_address_string, 16);
 
-                self.frame_data.goto_address_line = address.clone().ok().map(|addr| (addr - current_address_range.start) / self.options.column_count);
+                self.frame_data.goto_address_line = address.clone().ok()
+                    .map(|addr| (addr - current_address_range.start) / self.options.column_count);
                 self.frame_data.selected_highlight_address = address.ok();
             }
 
@@ -118,7 +124,8 @@ impl<T> MemoryEditor<T> {
                 } else {
                     0
                 }
-            }).collect::<Vec<u8>>();
+            })
+            .collect::<Vec<u8>>();
 
         crate::utilities::slice_to_decimal_string(data_preview, &bytes)
     }
