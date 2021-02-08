@@ -124,16 +124,12 @@ impl<T> MemoryEditor<T> {
 
                         for start_row in line_range.clone() {
                             let start_address = address_space.start + (start_row * column_count);
-                            ui.add(
-                                Label::new(format!("0x{:01$X}", start_address, address_characters))
+                            ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
                                     .text_color(address_text_colour)
-                                    .text_style(memory_editor_address_text_style),
-                            );
+                                    .text_style(memory_editor_address_text_style));
 
-                            // Render the memory values
                             self.draw_memory_values(ui, memory, start_address, &address_space);
 
-                            // Optional ASCII side
                             if show_ascii_sidebar {
                                 self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
                             }
@@ -152,8 +148,8 @@ impl<T> MemoryEditor<T> {
         let options = &self.options;
         let read_function = self.read_function;
         let write_function = &self.write_function;
-        let mut read_only = frame_data.selected_edit_address.is_none() || write_function.is_none();
         let highlight_address = frame_data.selected_highlight_address;
+        let mut read_only = frame_data.selected_edit_address.is_none() || write_function.is_none();
 
         for grid_column in 0..(options.column_count + 7) / 8 { // div_ceil
             let start_address = start_address + 8 * grid_column;
