@@ -2,7 +2,6 @@ use std::collections::BTreeMap;
 use std::ops::Range;
 
 use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
-use egui::Event::Key;
 
 use crate::option_data::{BetweenFrameUiData, DataFormatType, Endianness, MemoryEditorOptions};
 
@@ -161,6 +160,7 @@ impl<T> MemoryEditor<T> {
         } = &mut self.options;
 
         let address_ranges = &self.address_ranges;
+        let mut frame_data = &mut self.frame_data;
         // We check for address_ranges > 1 so should be safe to unwrap in *most* circumstances.
         let current_address_range = address_ranges.get(selected_address_range).unwrap();
 
@@ -189,7 +189,7 @@ impl<T> MemoryEditor<T> {
 
                     // Goto address
                     let response = ui.add(egui::TextEdit::singleline(goto_address_string).hint_text("0000"))
-                        .on_hover_text("Goto an address, can be written as either 0xAA or AA\nPress enter to move to the address");
+                        .on_hover_text("Goto an address, an address like 0xAA is written as AA\nPress enter to move to the address");
                     ui.label(format!("Goto: {:#X?}", current_address_range));
 
                     if response.clicked() {
@@ -203,7 +203,9 @@ impl<T> MemoryEditor<T> {
                             *goto_address_string = goto_address_string[2..].to_string();
                         }
                         let address = usize::from_str_radix(goto_address_string, 16);
-                        *goto_address_line = address.ok().map(|addr| (addr - current_address_range.start) / *column_count);
+
+                        *goto_address_line = address.clone().ok().map(|addr| (addr - current_address_range.start) / *column_count);
+                        frame_data.selected_highlight_address = address.ok();
                     }
 
                     ui.end_row();
@@ -243,6 +245,7 @@ impl<T> MemoryEditor<T> {
         let read_function = self.read_function;
         let write_function = &self.write_function;
         let mut read_only = frame_data.selected_edit_address.is_none() || write_function.is_none();
+        let highlight_address = frame_data.selected_highlight_address;
 
         for grid_column in 0..(options.column_count + 7) / 8 { // div_ceil
             let start_address = start_address + 8 * grid_column;
@@ -259,16 +262,23 @@ impl<T> MemoryEditor<T> {
 
                     let mem_val: u8 = read_function(memory, memory_address);
 
-                    let text_colour = if options.show_zero_colour && mem_val == 0 {
+                    let mut text_colour = if options.show_zero_colour && mem_val == 0 {
                         options.zero_colour
                     } else {
                         column.style().visuals.text_color()
                     };
 
+                    if let Some(highlight_address) = highlight_address {
+                        if highlight_address == memory_address {
+                            text_colour = options.highlight_colour;
+                        }
+                    }
+
                     let label_text = format!("{:02X}", mem_val);
 
-                    // For Editing
+                    // Memory Value Labels
                     if !read_only && frame_data.selected_edit_address.unwrap() == memory_address {
+                        // For Editing
                         let response = column.with_layout(Layout::left_to_right(), |ui| {
                             ui.add(TextEdit::singleline(&mut frame_data.selected_edit_address_string)
                                 .text_style(options.memory_editor_text_style)
@@ -314,9 +324,18 @@ impl<T> MemoryEditor<T> {
                                        .text_color(text_colour)
                                        .text_style(options.memory_editor_text_style), )
                         });
+                        // Right click always selects.
+                        if response.inner.clicked_by(egui::PointerButton::Secondary) {
+                            frame_data.set_highlight_address(memory_address);
+                        }
+                        // Left click depends on read only mode.
                         if response.inner.clicked() {
-                            frame_data.selected_edit_address = Some(memory_address);
-                            frame_data.selected_edit_address_request_focus = true;
+                            if write_function.is_none() {
+                                frame_data.set_highlight_address(memory_address);
+                            } else {
+                                frame_data.selected_edit_address = Some(memory_address);
+                                frame_data.selected_edit_address_request_focus = true;
+                            }
                         }
                     }
                 }

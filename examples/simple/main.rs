@@ -46,7 +46,7 @@ impl epi::App for App {
 
         // This will automatically check for `mem_editor.options.is_open`, so no need to do that here.
         self.mem_editor.window_ui(ctx, &mut self.memory);
-        // If your memory changes between frames you'll need to rerender at whatever rate you want.
+        // If your memory changes between frames you'll need to re-render at whatever framerate you want.
         ctx.request_repaint();
     }
 
@@ -55,7 +55,6 @@ impl epi::App for App {
     }
 }
 
-#[derive(Clone)]
 pub struct Memory {
     memory: Vec<u8>,
     read_addresses: Vec<usize>,
