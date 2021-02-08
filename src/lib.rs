@@ -33,9 +33,9 @@ pub struct MemoryEditor<T> {
     read_function: ReadFunction<T>,
     /// The function used when attempts are made to change values within the GUI.
     write_function: Option<WriteFunction<T>>,
-    /// The range of possible values to be displayed, the GUI will start at the lower bound and go up to the upper bound.
+    /// The collection of address ranges, the GUI will start at the lower bound and go up to the upper bound.
     ///
-    /// Note this *currently* only supports a range that has a max of `2^24`, due to `ScrollArea` limitations.
+    /// Note this *currently* only supports ranges that have a max of `2^(24+log_2(column_count))` due to `ScrollArea` limitations.
     address_ranges: BTreeMap<String, Range<usize>>,
     /// A collection of options relevant for the `MemoryEditor` window.
     /// Can optionally be serialized/deserialized with `serde`
@@ -158,7 +158,7 @@ impl<T> MemoryEditor<T> {
         for grid_column in 0..(options.column_count + 7) / 8 { // div_ceil
             let start_address = start_address + 8 * grid_column;
             // We use columns here instead of horizontal_for_text() to keep consistent spacing for non-monospace fonts.
-            // When fonts are more customizable (e.g, we can accept a `Font` as a setting instead of `TextStyle` I'd like
+            // When fonts are more customizable (e.g, we can accept a `Font` as a setting instead of `TextStyle`) I'd like
             // to switch to horizontal_for_text() as we can then just assume a decent Monospace font provided by the user.
             ui.columns((options.column_count - 8 * grid_column).min(8), |columns| {
                 for (i, column) in columns.iter_mut().enumerate() {
@@ -319,6 +319,7 @@ impl<T> MemoryEditor<T> {
     /// The first range that is added will be displayed by default when launching the UI.
     ///
     /// The UI will query your set `read_function` with the values within this `Range`
+    #[must_use]
     pub fn with_address_range(mut self, range_name: impl Into<String>, address_range: Range<usize>) -> Self {
         self.address_ranges.insert(range_name.into(), address_range);
         self.frame_data.memory_range_combo_box_enabled = self.address_ranges.len() > 1;
