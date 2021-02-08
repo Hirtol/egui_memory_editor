@@ -22,11 +22,16 @@ impl Default for App {
     fn default() -> Self {
         // Create a memory editor with a variety of ranges, need at least one, but can be as many as you want.
         // The write function is optional, if you don't set it the UI will be in read-only mode.
-        let mem_editor = MemoryEditor::<Memory>::new(|mem, address| mem.read_value(address))
+        let mut mem_editor = MemoryEditor::<Memory>::new(|mem, address| mem.read_value(address))
             .with_address_range("All", 0..0xFFFF)
             .with_address_range("IO", 0xFF00..0xFF80)
             .with_write_function(|mem, address, value| mem.write_value(address, value))
             .with_window_title("Hello Editor!");
+        // At the moment the UI can handle addresses in the range from 0..2^(24 + log_2(column_count)).
+        // This is something that'll hopefully be addressed soon to allow for ranges up to 2^64.
+
+        // You can set the column count in the UI, but also here. There are a variety of options available in mem_editor.options
+        mem_editor.options.column_count = 16;
         App {
             mem_editor,
             memory: Default::default(),

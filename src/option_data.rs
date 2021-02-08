@@ -41,7 +41,6 @@ impl DataFormatType {
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct DataPreviewOptions {
-    pub show_data_preview: bool,
     pub selected_endianness: Endianness,
     pub selected_data_format: DataFormatType,
 }
@@ -49,7 +48,6 @@ pub struct DataPreviewOptions {
 impl Default for DataPreviewOptions {
     fn default() -> Self {
         DataPreviewOptions {
-            show_data_preview: false,
             selected_endianness: Endianness::Little,
             selected_data_format: DataFormatType::U32,
         }
