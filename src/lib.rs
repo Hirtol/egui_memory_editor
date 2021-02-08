@@ -114,7 +114,7 @@ impl<T> MemoryEditor<T> {
         // Memory Editor Part.
         let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
-        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).with_start_line(std::mem::take(&mut self.options.goto_address))
+        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).with_start_line(std::mem::take(&mut self.options.goto_address_line))
             .show(ui, |ui, line_range| {
             egui::Grid::new("mem_edit_grid")
                 .striped(true)
@@ -158,11 +158,13 @@ impl<T> MemoryEditor<T> {
             memory_range_combo_box_enabled,
             selected_address_range,
             goto_address_string,
-            goto_address,
+            goto_address_line,
             ..
         } = &mut self.options;
 
         let address_ranges = &self.address_ranges;
+        // We check for address_ranges > 1 so should be safe to unwrap in *most* circumstances.
+        let current_address_range = address_ranges.get(selected_address_range).unwrap();
 
         egui::CollapsingHeader::new("🛠 Options")
             .default_open(true)
@@ -189,16 +191,19 @@ impl<T> MemoryEditor<T> {
 
                     // Goto address
                     let response = ui.add(egui::TextEdit::singleline(goto_address_string).hint_text("0000"))
-                        .on_hover_text("Goto an address, can be written as either 0xAA or AA");
-                    // We check for address_ranges > 1 so should be safe to unwrap in *most* circumstances.
-                    ui.label(format!("Range: {:#X?}", address_ranges.get(selected_address_range).unwrap()));
+                        .on_hover_text("Goto an address, can be written as either 0xAA or AA\nPress enter to move to the address");
+                    ui.label(format!("Goto: {:#X?}", current_address_range));
+
+                    if response.clicked() {
+                        goto_address_string.clear();
+                    }
 
                     if response.lost_kb_focus() && ui.input().key_pressed(egui::Key::Enter) {
                         if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
                             *goto_address_string = goto_address_string[2..].to_string();
                         }
                         let address = usize::from_str_radix(goto_address_string, 16);
-                        *goto_address = address.ok().map(|addr| addr / *column_count);
+                        *goto_address_line = address.ok().map(|addr| (addr - current_address_range.start) / *column_count);
                     }
 
                     ui.end_row();
@@ -300,6 +305,7 @@ impl<T> MemoryEditor<T> {
                         if response.inner.lost_kb_focus() {
                             frame_data.selected_address_string.clear();
                             frame_data.selected_address = None;
+                            read_only = true;
                         }
                     } else {
                         // Read-only values.

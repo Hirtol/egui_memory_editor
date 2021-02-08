@@ -76,7 +76,7 @@ pub struct MemoryEditorOptions {
     pub(crate) memory_range_combo_box_enabled: bool,
     pub(crate) selected_address_range: String,
     pub(crate) goto_address_string: String,
-    pub(crate) goto_address: Option<usize>,
+    pub(crate) goto_address_line: Option<usize>,
 }
 
 impl Default for MemoryEditorOptions {
@@ -96,7 +96,7 @@ impl Default for MemoryEditorOptions {
             memory_range_combo_box_enabled: false,
             selected_address_range: DEFAULT_RANGE_NAME.to_string(),
             goto_address_string: "".to_string(),
-            goto_address: None,
+            goto_address_line: None,
         }
     }
 }
