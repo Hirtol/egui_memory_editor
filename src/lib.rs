@@ -96,8 +96,6 @@ impl<T> MemoryEditor<T> {
 
         ui.separator();
 
-        let line_height = self.get_line_height(ui);
-
         let MemoryEditorOptions {
             data_preview_options,
             show_ascii_sidebar,
@@ -108,6 +106,7 @@ impl<T> MemoryEditor<T> {
             ..
         } = self.options.clone();
 
+        let line_height = self.get_line_height(ui);
         let address_space = self.address_ranges.get(&selected_address_range).unwrap().clone();
         // This is janky, but can't think of a better way.
         let address_characters = format!("{:X}", address_space.end).chars().count();
@@ -116,12 +115,13 @@ impl<T> MemoryEditor<T> {
 
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).with_start_line(std::mem::take(&mut self.options.goto_address_line))
             .show(ui, |ui, line_range| {
-            egui::Grid::new("mem_edit_grid")
+            egui::Grid::new("mem_edit_grid") //TODO: Tryout columns instead of Grid, then replace all other columns with normal text or horizontal_text.
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
                 .show(ui, |ui| {
                     ui.style_mut().wrap = Some(false);
                     ui.style_mut().spacing.item_spacing.x = 3.0;
+
                     for start_row in line_range.clone() {
                         let start_address = address_space.start + (start_row * column_count);
                         ui.add(
@@ -133,7 +133,6 @@ impl<T> MemoryEditor<T> {
                         // Render the memory values
                         self.draw_memory_values(ui, memory, start_address, &address_space);
 
-
                         // Optional ASCII side
                         if show_ascii_sidebar {
                             self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
@@ -142,7 +141,6 @@ impl<T> MemoryEditor<T> {
                         ui.end_row();
                     }
                 });
-
             // After we've drawn the area we want to resize to we want to save this size for the next frame.
             // In case it has became smaller we'll shrink the window.
             self.frame_data.previous_frame_editor_width = ui.min_rect().width();
@@ -242,7 +240,7 @@ impl<T> MemoryEditor<T> {
         let options = &self.options;
         let read_function = self.read_function;
         let write_function = &self.write_function;
-        let mut read_only = frame_data.selected_address.is_none() || write_function.is_none();
+        let mut read_only = frame_data.selected_edit_address.is_none() || write_function.is_none();
 
         for grid_column in 0..(options.column_count + 7) / 8 { // div_ceil
             let start_address = start_address + 8 * grid_column;
@@ -268,43 +266,43 @@ impl<T> MemoryEditor<T> {
                     let label_text = format!("{:02X}", mem_val);
 
                     // For Editing
-                    if !read_only && frame_data.selected_address.unwrap() == memory_address {
+                    if !read_only && frame_data.selected_edit_address.unwrap() == memory_address {
                         let response = column.with_layout(Layout::left_to_right(), |ui| {
-                            ui.add(TextEdit::singleline(&mut frame_data.selected_address_string)
+                            ui.add(TextEdit::singleline(&mut frame_data.selected_edit_address_string)
                                 .text_style(options.memory_editor_text_style)
                                 .hint_text(label_text))
                         });
-                        if frame_data.selected_address_request_focus {
-                            frame_data.selected_address_request_focus = false;
+                        if frame_data.selected_edit_address_request_focus {
+                            frame_data.selected_edit_address_request_focus = false;
                             column.memory().request_kb_focus(response.inner.id);
                         }
 
                         // Filter out any non Hex-Digit, doesn't seem to be a method in TextEdit for this.
-                        frame_data.selected_address_string.retain(|c| c.is_ascii_hexdigit());
+                        frame_data.selected_edit_address_string.retain(|c| c.is_ascii_hexdigit());
 
                         // Don't want more than 2 digits
-                        if frame_data.selected_address_string.chars().count() >= 2 {
+                        if frame_data.selected_edit_address_string.chars().count() >= 2 {
                             let next_address = memory_address + 1;
-                            let new_value = u8::from_str_radix(frame_data.selected_address_string.as_str(), 16);
+                            let new_value = u8::from_str_radix(frame_data.selected_edit_address_string.as_str(), 16);
 
                             if let Ok(value) = new_value {
                                 write_function.unwrap()(memory, memory_address, value);
                             }
 
-                            frame_data.selected_address_string.clear();
+                            frame_data.selected_edit_address_string.clear();
 
                             if address_space.contains(&next_address) {
-                                frame_data.selected_address = next_address.into();
-                                frame_data.selected_address_request_focus = true;
+                                frame_data.selected_edit_address = next_address.into();
+                                frame_data.selected_edit_address_request_focus = true;
                             } else {
-                                frame_data.selected_address = None;
+                                frame_data.selected_edit_address = None;
                             }
                         }
 
                         // We automatically write the value when there is a valid u8, so discard otherwise.
                         if response.inner.lost_kb_focus() {
-                            frame_data.selected_address_string.clear();
-                            frame_data.selected_address = None;
+                            frame_data.selected_edit_address_string.clear();
+                            frame_data.selected_edit_address = None;
                             read_only = true;
                         }
                     } else {
@@ -315,8 +313,8 @@ impl<T> MemoryEditor<T> {
                                        .text_style(options.memory_editor_text_style), )
                         });
                         if response.inner.clicked() {
-                            frame_data.selected_address = Some(memory_address);
-                            frame_data.selected_address_request_focus = true;
+                            frame_data.selected_edit_address = Some(memory_address);
+                            frame_data.selected_edit_address_request_focus = true;
                         }
                     }
                 }
@@ -342,7 +340,7 @@ impl<T> MemoryEditor<T> {
                     let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
                     let mut label = egui::Label::new(character).text_style(options.memory_editor_ascii_text_style);
 
-                    if self.frame_data.selected_address.map_or(false, |adr| adr == memory_address) {
+                    if self.frame_data.selected_edit_address.map_or(false, |adr| adr == memory_address) {
                         label = label.background_color(column.visuals().code_bg_color).text_color(options.highlight_colour);
                     }
                     column.with_layout(Layout::bottom_up(Align::Center), |ui| {
