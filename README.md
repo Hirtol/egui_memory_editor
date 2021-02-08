@@ -12,7 +12,7 @@ This is a simple memory editor/viewer utility for the immediate mode UI library 
 ## Usage
 It's best to look at the example in the `examples/` folder, but one can initialise the editor with any struct of their choosing.
 
-For example, a memory struct:
+For example, a custom memory struct:
 ```rust
 let mut memory = Memory::new();
 // Initialise with read function
