@@ -16,6 +16,7 @@ impl ClippedScrollArea {
         Self::from_max_height(max_lines, line_height, f32::INFINITY)
     }
 
+    #[allow(dead_code)]
     pub fn from_max_height(max_lines: usize, line_height: f32, max_height: f32) -> Self {
         Self {
             scroll_area: ScrollArea::from_max_height(max_height),
@@ -33,12 +34,14 @@ impl ClippedScrollArea {
 
     /// If `false` (default), the scroll bar will be hidden when not needed/
     /// If `true`, the scroll bar will always be displayed even if not needed.
+    #[allow(dead_code)]
     pub fn always_show_scroll(mut self, always_show_scroll: bool) -> Self {
         self.scroll_area = self.scroll_area.always_show_scroll(always_show_scroll);
         self
     }
 
     /// A source for the unique `Id`, e.g. `.id_source("second_scroll_area")` or `.id_source(loop_index)`.
+    #[allow(dead_code)]
     pub fn id_source(mut self, id_source: impl std::hash::Hash) -> Self {
         self.scroll_area = self.scroll_area.id_source(id_source);
         self
@@ -48,6 +51,7 @@ impl ClippedScrollArea {
     ///
     /// See also: [`Ui::scroll_to_cursor`](egui::Ui::scroll_to_cursor) and
     /// [`Response::scroll_to_me`](egui::Response::scroll_to_me)
+    #[allow(dead_code)]
     pub fn scroll_offset(mut self, offset: f32) -> Self {
         self.scroll_area = self.scroll_area.scroll_offset(offset);
         self
@@ -106,7 +110,7 @@ impl ScrollAreaClipper {
     ///
     /// Should be used as the last `Ui` function in a `ScrollArea`
     pub fn finish(&mut self, ui: &mut Ui) {
-        let scroll_y = get_current_scroll(ui).0 + ui.clip_rect().max.y;
+        let scroll_y = egui_get_current_scroll(ui).0 + ui.clip_rect().max.y;
         // We know we'll now have completed our obligation to draw at the start line, so remove it.
         self.start_line = None;
         // Always leave a little extra white space on the bottom to ensure the last line is visible.
@@ -137,7 +141,7 @@ impl ScrollAreaClipper {
         if let Some(&line) = self.start_line.as_ref() {
             self.line_height * line as f32
         } else {
-            let (scroll_y, _) = get_current_scroll(ui);
+            let (scroll_y, _) = egui_get_current_scroll(ui);
             scroll_y
         }
     }

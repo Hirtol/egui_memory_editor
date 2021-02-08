@@ -35,11 +35,11 @@ pub fn slice_to_decimal_string(data_preview: DataPreviewOptions, bytes: &[u8]) -
     }
 }
 
-/// Returns the `(current_scroll, max_scroll)` of the current UI (assuming it is within a `ScrollArea`).
+/// Returns the `(current_scroll, max_scroll)` of the current UI (assuming it is within a [`egui::ScrollArea`]).
 /// Taken from the `egui` scrolling demo.
 ///
-/// The `max_scroll` will only be valid if all contents within a `ScrollArea` have already been requested.
-pub fn get_current_scroll(ui: &Ui) -> (f32, f32) {
+/// The `max_scroll` will only be valid if all contents within a [`egui::ScrollArea`] have already been requested.
+pub fn egui_get_current_scroll(ui: &Ui) -> (f32, f32) {
     let margin = ui.style().visuals.clip_rect_margin;
     (
         ui.clip_rect().top() - ui.min_rect().top() + margin,

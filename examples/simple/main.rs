@@ -57,14 +57,12 @@ impl epi::App for App {
 
 pub struct Memory {
     memory: Vec<u8>,
-    read_addresses: Vec<usize>,
 }
 
 impl Default for Memory {
     fn default() -> Self {
         Memory {
             memory: vec![0xFF; u16::MAX as usize],
-            read_addresses: vec![],
         }
     }
 }

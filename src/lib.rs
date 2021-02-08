@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, TextEdit, TextStyle, Ui, Vec2, Window};
+use egui::{Align, CtxRef, Label, Layout, TextEdit, Ui, Vec2, Window};
 
 use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions};
 
@@ -78,7 +78,7 @@ impl<T> MemoryEditor<T> {
             .resizable(true)
             .show(ctx, |ui| {
                 self.shrink_window_ui(ui);
-                self.draw_viewer_contents(ui, memory);
+                self.draw_editor_contents(ui, memory);
             });
 
         self.options.is_open = is_open;
@@ -89,7 +89,7 @@ impl<T> MemoryEditor<T> {
     /// Can be included in whatever container you want.
     ///
     /// Use [`Self::window_ui`] if you want to have a window with the contents instead.
-    pub fn draw_viewer_contents(&mut self, ui: &mut Ui, memory: &mut T) {
+    pub fn draw_editor_contents(&mut self, ui: &mut Ui, memory: &mut T) {
         assert!(self.address_ranges.len() > 0, "At least one address range needs to be added to render the contents!");
 
         self.draw_options_area(ui, memory);
