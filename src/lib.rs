@@ -196,6 +196,8 @@ impl<T> MemoryEditor<T> {
                         goto_address_string.clear();
                     }
 
+                    goto_address_string.retain(|c| c.is_ascii_hexdigit());
+
                     if response.lost_kb_focus() && ui.input().key_pressed(egui::Key::Enter) {
                         if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
                             *goto_address_string = goto_address_string[2..].to_string();
