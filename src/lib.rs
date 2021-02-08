@@ -114,7 +114,7 @@ impl<T> MemoryEditor<T> {
         // Memory Editor Part.
         let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
-        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).with_start_line(std::mem::take(&mut self.options.goto_address_line))
+        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height).with_start_line(std::mem::take(&mut self.frame_data.goto_address_line))
             .show(ui, |ui, line_range| {
                 egui::Grid::new("mem_edit_grid") //TODO: Tryout columns instead of Grid, then replace all other columns with normal text or horizontal_text.
                     .striped(true)
@@ -320,7 +320,7 @@ impl<T> MemoryEditor<T> {
     /// The UI will query your set `read_function` with the values within this `Range`
     pub fn with_address_range(mut self, range_name: impl Into<String>, address_range: Range<usize>) -> Self {
         self.address_ranges.insert(range_name.into(), address_range);
-        self.options.memory_range_combo_box_enabled = self.address_ranges.len() > 1;
+        self.frame_data.memory_range_combo_box_enabled = self.address_ranges.len() > 1;
         if let Some((name, _)) = self.address_ranges.iter().next() {
             self.options.selected_address_range = name.clone();
         }

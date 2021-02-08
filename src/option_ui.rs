@@ -21,7 +21,7 @@ impl<T> MemoryEditor<T> {
     fn draw_main_options(&mut self, ui: &mut Ui, current_address_range: &Range<usize>) {
         egui::Grid::new("options_grid").show(ui, |ui| {
             // Memory region selection
-            if self.options.memory_range_combo_box_enabled {
+            if self.frame_data.memory_range_combo_box_enabled {
                 let selected_address_range = &mut self.options.selected_address_range;
                 let address_ranges = &self.address_ranges;
                 egui::combo_box_with_label(ui, "Memory Region", selected_address_range.clone(), |ui| {
@@ -42,24 +42,24 @@ impl<T> MemoryEditor<T> {
             self.options.column_count = columns_u8 as usize;
 
             // Goto address
-            let response = ui.add(egui::TextEdit::singleline(&mut self.options.goto_address_string).hint_text("0000"))
+            let response = ui.add(egui::TextEdit::singleline(&mut self.frame_data.goto_address_string).hint_text("0000"))
                 .on_hover_text("Goto an address, an address like 0xAA is written as AA\nPress enter to move to the address");
             ui.label(format!("Goto: {:#X?}", current_address_range));
 
             if response.clicked() {
-                self.options.goto_address_string.clear();
+                self.frame_data.goto_address_string.clear();
             }
 
-            self.options.goto_address_string.retain(|c| c.is_ascii_hexdigit());
+            self.frame_data.goto_address_string.retain(|c| c.is_ascii_hexdigit());
 
             if response.lost_kb_focus() && ui.input().key_pressed(egui::Key::Enter) {
-                let goto_address_string = &mut self.options.goto_address_string;
+                let goto_address_string = &mut self.frame_data.goto_address_string;
                 if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
                     *goto_address_string = goto_address_string[2..].to_string();
                 }
                 let address = usize::from_str_radix(goto_address_string, 16);
 
-                self.options.goto_address_line = address.clone().ok().map(|addr| (addr - current_address_range.start) / self.options.column_count);
+                self.frame_data.goto_address_line = address.clone().ok().map(|addr| (addr - current_address_range.start) / self.options.column_count);
                 self.frame_data.selected_highlight_address = address.ok();
             }
 

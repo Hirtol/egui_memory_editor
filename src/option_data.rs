@@ -94,10 +94,8 @@ pub struct MemoryEditorOptions {
     /// The [`egui::TextStyle`] for the ASCII values in the right side-bar (if they're enabled).
     /// /// Default is [`egui::TextStyle::Monospace`]
     pub memory_editor_ascii_text_style: TextStyle,
-    pub(crate) memory_range_combo_box_enabled: bool,
+    /// The selected address range, always applicable, not really relevant for consumers of the editor.
     pub(crate) selected_address_range: String,
-    pub(crate) goto_address_string: String,
-    pub(crate) goto_address_line: Option<usize>,
 }
 
 impl Default for MemoryEditorOptions {
@@ -114,15 +112,12 @@ impl Default for MemoryEditorOptions {
             memory_editor_text_style: TextStyle::Heading, // Non-monospace default as I personally find it too small, and columns provide close-enough alignment.
             memory_editor_address_text_style: TextStyle::Heading,
             memory_editor_ascii_text_style: TextStyle::Monospace,
-            memory_range_combo_box_enabled: false,
             selected_address_range: "".to_string(),
-            goto_address_string: "".to_string(),
-            goto_address_line: None,
         }
     }
 }
 
-/// A rather hacky struct to maintain some state between frames for layout purposes
+/// Some extra, non-serializable state for between frames.
 #[derive(Debug, Default, Clone)]
 pub(crate) struct BetweenFrameUiData {
     /// Used to ensure we can resize the window in height, but not in width.
@@ -131,7 +126,13 @@ pub(crate) struct BetweenFrameUiData {
     pub selected_edit_address: Option<usize>,
     pub selected_edit_address_string: String,
     pub selected_edit_address_request_focus: bool,
+
+    pub memory_range_combo_box_enabled: bool,
+
     pub selected_highlight_address: Option<usize>,
+
+    pub goto_address_string: String,
+    pub goto_address_line: Option<usize>,
 }
 
 impl BetweenFrameUiData {
