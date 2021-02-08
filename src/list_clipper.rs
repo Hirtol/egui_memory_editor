@@ -2,7 +2,7 @@ use std::ops::Range;
 
 use egui::{ScrollArea, Ui, Vec2, Align};
 
-use crate::egui_utilities::*;
+use crate::utilities::*;
 
 /// Thin wrapper around a `ScrollArea` to reduce indentation when using the `ScrollAreaClipper`
 #[derive(Clone, Debug)]

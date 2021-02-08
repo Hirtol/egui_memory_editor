@@ -6,7 +6,7 @@ use egui::{Align, Color32, CtxRef, FontDefinitions, Label, Layout, Pos2, Rect, T
 use crate::option_data::{BetweenFrameUiData, DataFormatType, DataPreviewOptions, Endianness, MemoryEditorOptions};
 use std::convert::TryInto;
 
-mod egui_utilities;
+mod utilities;
 mod list_clipper;
 pub mod option_data;
 
@@ -237,11 +237,16 @@ impl<T> MemoryEditor<T> {
 
                         // Read and display the value
                         let address_to_read = frame_data.selected_highlight_address;
-                        ui.label(format!("Value at {:#X} (decimal): ", address_to_read.unwrap_or_default()));
+                        let hover_text = "Right click a value in the UI to select it, right click again to unselect";
+
 
                         if let Some(address) = address_to_read {
                             let value = Self::read_mem_value(read_function, address, *data_preview_options, current_address_range, memory);
+                            ui.label(format!("Value at {:#X} (decimal): ", address)).on_hover_text(hover_text);
                             ui.label(value);
+                        } else {
+                            ui.label("Value (decimal): ").on_hover_text(hover_text);
+                            ui.label("None");
                         }
                     });
                 })
@@ -250,47 +255,18 @@ impl<T> MemoryEditor<T> {
 
     fn draw_data_preview(&mut self) {}
 
-    pub fn slice_to_decimal_string(data_preview: DataPreviewOptions, bytes: &[u8]) -> String {
-        match data_preview.selected_endianness {
-            Endianness::Big => match data_preview.selected_data_format {
-                DataFormatType::U8 => u8::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::U16 => u16::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::U32 => u32::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::U64 => u64::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::I8 => i8::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::I16 => i16::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::I32 => i32::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::I64 => i64::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::F32 => f32::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::F64 => f64::from_be_bytes(bytes.try_into().unwrap()).to_string(),
-            }
-            Endianness::Little => match data_preview.selected_data_format {
-                DataFormatType::U8 => u8::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::U16 => u16::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::U32 => u32::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::U64 => u64::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::I8 => i8::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::I16 => i16::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::I32 => i32::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::I64 => i64::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::F32 => f32::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-                DataFormatType::F64 => f64::from_le_bytes(bytes.try_into().unwrap()).to_string(),
-            }
-        }
-    }
-
     fn read_mem_value(read_function: ReadFunction<T>, address: usize, data_preview: DataPreviewOptions, address_space: &Range<usize>, memory: &mut T) -> String {
         let bytes = (0..data_preview.selected_data_format.bytes_to_read())
-            .filter_map(|i| {
+            .map(|i| {
                 let read_address = address + i;
                 if address_space.contains(&read_address) {
-                    Some(read_function(memory, read_address))
+                    read_function(memory, read_address)
                 } else {
-                    None
+                    0
                 }
             }).collect::<Vec<u8>>();
 
-        Self::slice_to_decimal_string(data_preview, &bytes)
+        crate::utilities::slice_to_decimal_string(data_preview, &bytes)
     }
 
     fn draw_memory_values(&mut self, ui: &mut Ui, memory: &mut T, start_address: usize, address_space: &Range<usize>) {
