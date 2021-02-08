@@ -1,7 +1,5 @@
 use egui::{Color32, TextStyle};
 
-pub(crate) const DEFAULT_RANGE_NAME: &str = "DEFAULT";
-
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 pub enum Endianness {
@@ -70,16 +68,31 @@ impl Default for DataPreviewOptions {
 pub struct MemoryEditorOptions {
     /// Used to check if the window is open, if you don't use the [`crate::MemoryEditor::window_ui`] call then this is irrelevant.
     pub is_open: bool,
+    /// Whether to show the ASCII representation of all the `u8` values in the main UI.
     pub show_ascii_sidebar: bool,
+    /// Whether `0x00` values in the main UI should use the [`MemoryEditorOptions::zero_colour`].
     pub show_zero_colour: bool,
+    /// The options which determine how to interpret selected data, concerning endianness and number type.
     pub data_preview_options: DataPreviewOptions,
+    /// The amount of columns for the main UI, this amount directly impacts the possible size of your address space.
+    ///
+    /// At the moment, you'll at most be able to display the range: `0..2^(24 + log_2(column_count))`.
     pub column_count: usize,
     /// A custom colour for `0x00`. By default will be grey.
     pub zero_colour: Color32,
+    /// The colour for address indicators on the very left of the UI.
     pub address_text_colour: Color32,
+    /// The highlight colour for both the main UI and the ASCII sidebar.
+    /// This will be enabled when you right-click an address, or when using the `goto address` function in the UI.
     pub highlight_colour: Color32,
+    /// The [`egui::TextStyle`] for the main UI, indicating the values.
+    /// Default is [`egui::TextStyle::Heading`]
     pub memory_editor_text_style: TextStyle,
+    /// The [`egui::TextStyle`] for the addresses in the main UI on the left.
+    /// Default is [`egui::TextStyle::Heading`]
     pub memory_editor_address_text_style: TextStyle,
+    /// The [`egui::TextStyle`] for the ASCII values in the right side-bar (if they're enabled).
+    /// /// Default is [`egui::TextStyle::Monospace`]
     pub memory_editor_ascii_text_style: TextStyle,
     pub(crate) memory_range_combo_box_enabled: bool,
     pub(crate) selected_address_range: String,
@@ -102,7 +115,7 @@ impl Default for MemoryEditorOptions {
             memory_editor_address_text_style: TextStyle::Heading,
             memory_editor_ascii_text_style: TextStyle::Monospace,
             memory_range_combo_box_enabled: false,
-            selected_address_range: DEFAULT_RANGE_NAME.to_string(),
+            selected_address_range: "".to_string(),
             goto_address_string: "".to_string(),
             goto_address_line: None,
         }
