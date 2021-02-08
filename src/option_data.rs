@@ -123,4 +123,9 @@ impl BetweenFrameUiData {
             new_address.into()
         }
     }
+
+    #[inline]
+    pub fn should_highlight(&self, address: usize) -> bool {
+        self.selected_highlight_address.map_or(false, |addr| addr == address) || self.selected_edit_address.map_or(false, |addr| addr == address)
+    }
 }

@@ -305,6 +305,7 @@ impl<T> MemoryEditor<T> {
 
                             if address_space.contains(&next_address) {
                                 frame_data.selected_edit_address = next_address.into();
+                                frame_data.set_highlight_address(next_address);
                                 frame_data.selected_edit_address_request_focus = true;
                             } else {
                                 frame_data.selected_edit_address = None;
@@ -330,9 +331,8 @@ impl<T> MemoryEditor<T> {
                         }
                         // Left click depends on read only mode.
                         if response.inner.clicked() {
-                            if write_function.is_none() {
-                                frame_data.set_highlight_address(memory_address);
-                            } else {
+                            frame_data.set_highlight_address(memory_address);
+                            if write_function.is_some() {
                                 frame_data.selected_edit_address = Some(memory_address);
                                 frame_data.selected_edit_address_request_focus = true;
                             }
@@ -361,7 +361,7 @@ impl<T> MemoryEditor<T> {
                     let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
                     let mut label = egui::Label::new(character).text_style(options.memory_editor_ascii_text_style);
 
-                    if self.frame_data.selected_edit_address.map_or(false, |adr| adr == memory_address) {
+                    if self.frame_data.should_highlight(memory_address) {
                         label = label.background_color(column.visuals().code_bg_color).text_color(options.highlight_colour);
                     }
                     column.with_layout(Layout::bottom_up(Align::Center), |ui| {
