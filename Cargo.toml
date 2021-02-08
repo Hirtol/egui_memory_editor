@@ -3,6 +3,13 @@ name = "egui_memory_editor"
 version = "0.1.0"
 authors = ["Hirtol <rust@hirtol.top>"]
 edition = "2018"
+description = "A simple memory editor for the egui library"
+readme = "README.md"
+homepage = "https://github.com/Hirtol/egui_memory_editor"
+repository = "https://github.com/Hirtol/egui_memory_editor"
+license = "MIT/Apache-2.0"
+keywords = ["egui", "memory", "editor", "emulator"]
+categories = ["gui"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
