@@ -1,7 +1,7 @@
 # Egui Memory Editor
 This is a simple memory editor/viewer utility for the immediate mode UI library [egui](https://crates.io/crates/egui)
 
-![screenshot](./assets/main_screenshot.png)
+![screenshot](./assets/main_screenshot_monospace.png)
 
 ## Features
 * Multiple memory regions with different address ranges can be created.

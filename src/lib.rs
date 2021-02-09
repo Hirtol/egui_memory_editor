@@ -127,7 +127,7 @@ impl<T> MemoryEditor<T> {
 
                         for start_row in line_range.clone() {
                             let start_address = address_space.start + (start_row * column_count);
-                            ui.add(Label::new(format!("0x{:01$X}", start_address, address_characters))
+                            ui.add(Label::new(format!("0x{:01$X}:", start_address, address_characters))
                                     .text_color(address_text_colour)
                                     .text_style(memory_editor_address_text_style));
 
@@ -183,7 +183,7 @@ impl<T> MemoryEditor<T> {
                     // Memory Value Labels
                     if !read_only && frame_data.selected_edit_address.unwrap() == memory_address {
                         // For Editing
-                        let response = column.with_layout(Layout::bottom_up(Align::Center), |ui| {
+                        let response = column.with_layout(Layout::right_to_left(), |ui| {
                             ui.add(TextEdit::singleline(&mut frame_data.selected_edit_address_string)
                                 .text_style(options.memory_editor_text_style)
                                 .hint_text(label_text))
@@ -214,7 +214,9 @@ impl<T> MemoryEditor<T> {
                         }
                     } else {
                         // Read-only values.
-                        let response = column.with_layout(Layout::bottom_up(Align::Center), |ui| {
+                        // This particular layout is necessary to stop the memory values gradually shifting over to the right
+                        // Presumably due to some floating point error when using left_to_right()
+                        let response = column.with_layout(Layout::right_to_left(), |ui| {
                             ui.add(Label::new(label_text)
                                        .text_color(text_colour)
                                        .text_style(options.memory_editor_text_style))
