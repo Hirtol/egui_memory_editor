@@ -93,7 +93,7 @@ pub struct MemoryEditorOptions {
     /// Default is [`egui::TextStyle::Monospace`]
     pub memory_editor_address_text_style: TextStyle,
     /// The [`egui::TextStyle`] for the ASCII values in the right side-bar (if they're enabled).
-    /// /// Default is [`egui::TextStyle::Monospace`]
+    /// Default is [`egui::TextStyle::Monospace`]
     pub memory_editor_ascii_text_style: TextStyle,
     /// The selected address range, always applicable, not really relevant for consumers of the editor.
     pub(crate) selected_address_range: String,

@@ -26,6 +26,9 @@ pub type ReadFunction<T> = fn(&mut T, usize) -> u8;
 /// - `u8`: The value set by the user for the provided address.
 pub type WriteFunction<T> = fn(&mut T, usize, u8);
 
+/// The main struct for the editor window.
+/// This should persist between frames as it keeps track of quite a bit of state.
+#[derive(Clone)]
 pub struct MemoryEditor<T> {
     /// The name of the `egui` window, can be left blank.
     window_name: String,
@@ -329,7 +332,7 @@ impl<T> MemoryEditor<T> {
     }
 
     /// Add an address range to the range list.
-    /// Multiple address ranges can be added, and will be displayed in the UI by a drop-down box if more than 1
+    /// Multiple address ranges can be added, and will be displayed in the UI by a drop-down box if more than one
     /// range was added.
     ///
     /// The first range that is added will be displayed by default when launching the UI.
