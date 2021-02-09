@@ -301,7 +301,7 @@ impl<T> MemoryEditor<T> {
 
             self.frame_data.set_selected_edit_address(Some(next_address), address_range);
             // Follow the edit cursor whilst moving with the arrow keys.
-            self.frame_data.goto_address_line = Some(next_address / self.options.column_count);
+            //self.frame_data.goto_address_line = Some(next_address / self.options.column_count);
         }
     }
 
