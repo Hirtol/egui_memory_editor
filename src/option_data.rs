@@ -139,7 +139,7 @@ pub(crate) struct BetweenFrameUiData {
 impl BetweenFrameUiData {
     pub fn set_highlight_address(&mut self, new_address: usize) {
         // We want to be able to unselect it.
-        self.selected_highlight_address = if matches!(std::mem::take(&mut self.selected_highlight_address), Some(current) if current == new_address) {
+        self.selected_highlight_address = if matches!(self.selected_highlight_address, Some(current) if current == new_address) {
             self.goto_address_string.clear();
             None
         } else {

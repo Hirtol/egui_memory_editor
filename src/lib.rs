@@ -225,10 +225,10 @@ impl<T> MemoryEditor<T> {
                         }
                         // Left click depends on read only mode.
                         if response.inner.clicked() {
-                            frame_data.set_highlight_address(memory_address);
                             if write_function.is_some() {
-                                frame_data.selected_edit_address = Some(memory_address);
-                                frame_data.selected_edit_address_request_focus = true;
+                                frame_data.set_selected_edit_address(Some(memory_address), address_space);
+                            } else {
+                                frame_data.set_highlight_address(memory_address);
                             }
                         }
                     }
