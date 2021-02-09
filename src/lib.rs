@@ -183,7 +183,7 @@ impl<T> MemoryEditor<T> {
                     // Memory Value Labels
                     if !read_only && frame_data.selected_edit_address.unwrap() == memory_address {
                         // For Editing
-                        let response = column.with_layout(Layout::left_to_right(), |ui| {
+                        let response = column.with_layout(Layout::bottom_up(Align::Center), |ui| {
                             ui.add(TextEdit::singleline(&mut frame_data.selected_edit_address_string)
                                 .text_style(options.memory_editor_text_style)
                                 .hint_text(label_text))
@@ -193,7 +193,7 @@ impl<T> MemoryEditor<T> {
                             column.memory().request_kb_focus(response.inner.id);
                         }
 
-                        // Filter out any non Hex-Digit, doesn't seem to be a method in TextEdit for this.
+                        // Filter out any non Hex-Digit, there doesn't seem to be a method in TextEdit for this.
                         frame_data.selected_edit_address_string.retain(|c| c.is_ascii_hexdigit());
 
                         // Don't want more than 2 digits
@@ -206,7 +206,9 @@ impl<T> MemoryEditor<T> {
                             }
 
                             frame_data.set_selected_edit_address(Some(next_address), address_space);
-                        } else if response.inner.lost_kb_focus() {
+                        } else if !column.ctx().memory().has_kb_focus(response.inner.id) {
+                            // We use has_kb_focus() instead of response.inner.lost_kb_focus() due to the latter
+                            // having a bug where it doesn't detect it lost focus when you scroll.
                             frame_data.set_selected_edit_address(None, address_space);
                             read_only = true;
                         }
