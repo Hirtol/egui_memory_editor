@@ -3,7 +3,6 @@ use eframe::egui::CtxRef;
 use eframe::epi;
 use eframe::epi::Frame;
 use egui_memory_editor::MemoryEditor;
-use egui::TextStyle;
 
 mod frame_history;
 
@@ -33,8 +32,6 @@ impl Default for App {
 
         // You can set the column count in the UI, but also here. There are a variety of options available in mem_editor.options
         mem_editor.options.column_count = 16;
-        //mem_editor.options.memory_editor_text_style = TextStyle::Heading;
-        //mem_editor.options.memory_editor_address_text_style = TextStyle::Heading;
         App {
             mem_editor,
             memory: Default::default(),
