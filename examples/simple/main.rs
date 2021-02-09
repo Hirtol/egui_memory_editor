@@ -3,6 +3,7 @@ use eframe::egui::CtxRef;
 use eframe::epi;
 use eframe::epi::Frame;
 use egui_memory_editor::MemoryEditor;
+use egui::TextStyle;
 
 mod frame_history;
 

@@ -1,7 +1,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Align, CtxRef, Label, Layout, TextEdit, Ui, Vec2, Window};
+use egui::{Align, CtxRef, Label, Layout, TextEdit, Ui, Vec2, Window, Direction};
 
 use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions};
 
@@ -199,7 +199,7 @@ impl<T> MemoryEditor<T> {
                         // Don't want more than 2 digits
                         if frame_data.selected_edit_address_string.chars().count() >= 2 {
                             let next_address = memory_address + 1;
-                            let new_value = u8::from_str_radix(frame_data.selected_edit_address_string.as_str(), 16);
+                            let new_value = u8::from_str_radix(&frame_data.selected_edit_address_string[0..2], 16);
 
                             if let Ok(value) = new_value {
                                 write_function.unwrap()(memory, memory_address, value);

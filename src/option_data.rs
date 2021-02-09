@@ -87,10 +87,10 @@ pub struct MemoryEditorOptions {
     /// This will be enabled when you right-click an address, or when using the `goto address` function in the UI.
     pub highlight_colour: Color32,
     /// The [`egui::TextStyle`] for the main UI, indicating the values.
-    /// Default is [`egui::TextStyle::Heading`]
+    /// Default is [`egui::TextStyle::Monospace`]
     pub memory_editor_text_style: TextStyle,
     /// The [`egui::TextStyle`] for the addresses in the main UI on the left.
-    /// Default is [`egui::TextStyle::Heading`]
+    /// Default is [`egui::TextStyle::Monospace`]
     pub memory_editor_address_text_style: TextStyle,
     /// The [`egui::TextStyle`] for the ASCII values in the right side-bar (if they're enabled).
     /// /// Default is [`egui::TextStyle::Monospace`]
@@ -110,8 +110,8 @@ impl Default for MemoryEditorOptions {
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
             highlight_colour: Color32::from_rgb(0, 140, 140),
-            memory_editor_text_style: TextStyle::Heading, // Non-monospace default as I personally find it too small, and columns provide close-enough alignment.
-            memory_editor_address_text_style: TextStyle::Heading,
+            memory_editor_text_style: TextStyle::Monospace,
+            memory_editor_address_text_style: TextStyle::Monospace,
             memory_editor_ascii_text_style: TextStyle::Monospace,
             selected_address_range: "".to_string(),
         }
