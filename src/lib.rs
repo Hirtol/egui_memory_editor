@@ -118,7 +118,7 @@ impl<T> MemoryEditor<T> {
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height)
             .with_start_line(std::mem::take(&mut self.frame_data.goto_address_line))
             .show(ui, |ui, line_range| {
-                egui::Grid::new("mem_edit_grid") //TODO: Tryout columns instead of Grid, then replace all other columns with normal text or horizontal_text.
+                egui::Grid::new("mem_edit_grid")
                     .striped(true)
                     .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
                     .show(ui, |ui| {
