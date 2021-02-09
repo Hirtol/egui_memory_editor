@@ -48,7 +48,7 @@ impl<T> MemoryEditor<T> {
     /// Create the MemoryEditor, which should be kept in memory between frames.
     ///
     /// The `read_function` should return one `u8` value from the object which you provide in
-    /// either the [`Self::window_ui`] or the [`Self::draw_viewer_contents`] method.
+    /// either the [`Self::window_ui`] or the [`Self::draw_editor_contents`] method.
     ///
     /// ```
     /// # use egui_memory_editor::MemoryEditor;
@@ -68,7 +68,7 @@ impl<T> MemoryEditor<T> {
 
     /// Create a window and render the memory editor contents within.
     ///
-    /// If you want to make your own window/container to be used for the editor contents, you can use [`Self::draw_viewer_contents`].
+    /// If you want to make your own window/container to be used for the editor contents, you can use [`Self::draw_editor_contents`].
     pub fn window_ui(&mut self, ctx: &CtxRef, memory: &mut T) {
         let mut is_open = self.options.is_open;
 
