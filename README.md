@@ -31,3 +31,7 @@ To run the example do the following:
 1. `git clone https://github.com/Hirtol/egui_memory_editor`
 2. `cd egui_memory_editor`
 3. `cargo run --example simple --release`
+
+## Feature Showcase
+
+![gif](./assets/egui_gif.gif)
