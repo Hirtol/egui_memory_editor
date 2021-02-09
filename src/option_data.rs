@@ -1,4 +1,5 @@
 use egui::{Color32, TextStyle};
+use std::ops::Range;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
@@ -138,13 +139,27 @@ pub(crate) struct BetweenFrameUiData {
 impl BetweenFrameUiData {
     pub fn set_highlight_address(&mut self, new_address: usize) {
         self.selected_highlight_address = if let Some(current) = std::mem::take(&mut self.selected_highlight_address) {
+            // We want to be able to unselect it.
             if current == new_address {
                 None
             } else {
+                self.goto_address_string = format!("{:X}", new_address);
                 new_address.into()
             }
         } else {
+            self.goto_address_string = format!("{:X}", new_address);
             new_address.into()
+        }
+    }
+
+    pub fn set_selected_edit_address(&mut self, new_address: Option<usize>, address_space: &Range<usize>) {
+        self.selected_edit_address_string.clear();
+        if matches!(new_address, Some(address) if address_space.contains(&address)) {
+            self.set_highlight_address(new_address.unwrap());
+            self.selected_edit_address_request_focus = true;
+            self.selected_edit_address = new_address;
+        } else {
+            self.selected_edit_address = None;
         }
     }
 

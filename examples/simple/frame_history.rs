@@ -17,8 +17,8 @@ impl Default for FrameHistory {
 
 impl FrameHistory {
     // Called first
-    pub fn on_new_frame(&mut self, now: f64, previus_frame_time: Option<f32>) {
-        let previus_frame_time = previus_frame_time.unwrap_or_default();
+    pub fn on_new_frame(&mut self, now: f64, previous_frame: Option<f32>) {
+        let previus_frame_time = previous_frame.unwrap_or_default();
         if let Some(latest) = self.frame_times.latest_mut() {
             *latest = previus_frame_time; // rewrite history now that we know
         }

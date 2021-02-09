@@ -112,6 +112,9 @@ impl<T> MemoryEditor<T> {
         // Memory Editor Part.
         let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
+        // For when we're editing memory, don't use the `Response` object as that would screw over downward scrolling.
+        self.handle_keyboard_edit_input(&address_space, ui.ctx());
+
         list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height)
             .with_start_line(std::mem::take(&mut self.frame_data.goto_address_line))
             .show(ui, |ui, line_range| {
@@ -148,7 +151,6 @@ impl<T> MemoryEditor<T> {
         let options = &self.options;
         let read_function = self.read_function;
         let write_function = &self.write_function;
-        let highlight_address = frame_data.selected_highlight_address;
         let mut read_only = frame_data.selected_edit_address.is_none() || write_function.is_none();
 
         for grid_column in 0..(options.column_count + 7) / 8 { // div_ceil
@@ -172,10 +174,8 @@ impl<T> MemoryEditor<T> {
                         column.style().visuals.text_color()
                     };
 
-                    if let Some(highlight_address) = highlight_address {
-                        if highlight_address == memory_address {
-                            text_colour = options.highlight_colour;
-                        }
+                    if frame_data.should_highlight(memory_address) {
+                        text_colour = options.highlight_colour;
                     }
 
                     let label_text = format!("{:02X}", mem_val);
@@ -205,21 +205,9 @@ impl<T> MemoryEditor<T> {
                                 write_function.unwrap()(memory, memory_address, value);
                             }
 
-                            frame_data.selected_edit_address_string.clear();
-
-                            if address_space.contains(&next_address) {
-                                frame_data.selected_edit_address = next_address.into();
-                                frame_data.set_highlight_address(next_address);
-                                frame_data.selected_edit_address_request_focus = true;
-                            } else {
-                                frame_data.selected_edit_address = None;
-                            }
-                        }
-
-                        // We automatically write the value when there is a valid u8, so discard otherwise.
-                        if response.inner.lost_kb_focus() {
-                            frame_data.selected_edit_address_string.clear();
-                            frame_data.selected_edit_address = None;
+                            frame_data.set_selected_edit_address(Some(next_address), address_space);
+                        } else if response.inner.lost_kb_focus() {
+                            frame_data.set_selected_edit_address(None, address_space);
                             read_only = true;
                         }
                     } else {
@@ -227,10 +215,10 @@ impl<T> MemoryEditor<T> {
                         let response = column.with_layout(Layout::bottom_up(Align::Center), |ui| {
                             ui.add(Label::new(label_text)
                                        .text_color(text_colour)
-                                       .text_style(options.memory_editor_text_style), )
+                                       .text_style(options.memory_editor_text_style))
                         });
                         // Right click always selects.
-                        if response.inner.clicked_by(egui::PointerButton::Secondary) {
+                        if response.inner.secondary_clicked() {
                             frame_data.set_highlight_address(memory_address);
                         }
                         // Left click depends on read only mode.
@@ -290,6 +278,31 @@ impl<T> MemoryEditor<T> {
     /// This essentially allows us to only have height resize, and have width grow/shrink as appropriate.
     fn shrink_window_ui(&self, ui: &mut Ui) {
         ui.set_max_width(ui.min_rect().width().max(self.frame_data.previous_frame_editor_width));
+    }
+
+    /// Check for arrow keys when we're editing a memory value at an address.
+    fn handle_keyboard_edit_input(&mut self, address_range: &Range<usize>, ctx: &CtxRef) {
+        use egui::Key::*;
+        if self.frame_data.selected_edit_address.is_none() {
+            return;
+        }
+        // We know it must exist otherwise this function can't be called, so safe to unwrap.
+        let current_address = self.frame_data.selected_edit_address.unwrap();
+        let keys = [ArrowLeft, ArrowRight, ArrowDown, ArrowUp];
+        let key_pressed = keys.iter().filter(|&&k| ctx.input().key_pressed(k)).next();
+        if let Some(key) = key_pressed {
+            let next_address = match key {
+                ArrowDown => current_address + self.options.column_count,
+                ArrowLeft => current_address - 1,
+                ArrowRight => current_address + 1,
+                ArrowUp => current_address - self.options.column_count,
+                _ => unreachable!()
+            };
+
+            self.frame_data.set_selected_edit_address(Some(next_address), address_range);
+            // Follow the edit cursor whilst moving with the arrow keys.
+            self.frame_data.goto_address_line = Some(next_address / self.options.column_count);
+        }
     }
 
     // ** Builder methods **
