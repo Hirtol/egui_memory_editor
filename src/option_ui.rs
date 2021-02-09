@@ -74,6 +74,7 @@ impl<T> MemoryEditor<T> {
             // Checkboxes
             let show_ascii_sidebar = &mut self.options.show_ascii_sidebar;
             let show_zero_colour = &mut self.options.show_zero_colour;
+
             ui.checkbox(show_ascii_sidebar, "Show ASCII")
                 .on_hover_text(format!("{} the ASCII representation view", if *show_ascii_sidebar { "Disable" } else { "Enable" }));
             ui.checkbox(show_zero_colour, "Custom zero colour")
@@ -83,7 +84,7 @@ impl<T> MemoryEditor<T> {
 
     /// Draws the data preview underneath a collapsing header.
     fn draw_data_preview(&mut self, ui: &mut Ui, current_address_range: &Range<usize>, memory: &mut T) {
-        egui::CollapsingHeader::new("⛃ Data Preview").default_open(false).show(ui, |ui| {
+        let response = egui::CollapsingHeader::new("⛃ Data Preview").default_open(false).show(ui, |ui| {
             egui::Grid::new("data_preview_grid").show(ui, |ui| {
                 let data_preview_options = &mut self.options.data_preview_options;
                 // Format selection
@@ -113,6 +114,10 @@ impl<T> MemoryEditor<T> {
                 }
             });
         });
+        // Currently relies on the header being open_default(false), otherwise we'd enable the highlight when closing the preview!
+        if response.header_response.clicked() {
+            self.frame_data.show_additional_highlights = !self.frame_data.show_additional_highlights;
+        }
     }
 
     fn read_mem_value(read_function: ReadFunction<T>, address: usize, data_preview: DataPreviewOptions, address_space: &Range<usize>, memory: &mut T) -> String {

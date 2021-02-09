@@ -120,7 +120,7 @@ impl Default for MemoryEditorOptions {
 
 /// Some extra, non-serializable state for between frames.
 #[derive(Debug, Default, Clone)]
-pub(crate) struct BetweenFrameUiData {
+pub(crate) struct BetweenFrameData {
     /// Used to ensure we can resize the window in height, but not in width.
     pub previous_frame_editor_width: f32,
     /// The address a user clicked on in the UI in the previous frame, used for DataPreview
@@ -131,12 +131,15 @@ pub(crate) struct BetweenFrameUiData {
     pub memory_range_combo_box_enabled: bool,
 
     pub selected_highlight_address: Option<usize>,
+    /// Whether to show additional highlights around items after the current selected item when they'd be part
+    /// of the value in the data preview section.
+    pub show_additional_highlights: bool,
 
     pub goto_address_string: String,
     pub goto_address_line: Option<usize>,
 }
 
-impl BetweenFrameUiData {
+impl BetweenFrameData {
     pub fn set_highlight_address(&mut self, new_address: usize) {
         // We want to be able to unselect it.
         self.selected_highlight_address = if matches!(self.selected_highlight_address, Some(current) if current == new_address) {
@@ -163,5 +166,11 @@ impl BetweenFrameUiData {
     pub fn should_highlight(&self, address: usize) -> bool {
         self.selected_highlight_address.map_or(false, |addr| addr == address)
             || self.selected_edit_address.map_or(false, |addr| addr == address)
+    }
+
+    pub fn should_subtle_highlight(&self, address: usize, data_format: DataFormatType) -> bool {
+        self.show_additional_highlights && self.selected_highlight_address.map_or(false, |addr| {
+            (addr..addr+data_format.bytes_to_read()).contains(&address)
+        })
     }
 }

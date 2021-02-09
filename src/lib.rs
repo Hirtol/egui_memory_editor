@@ -1,9 +1,9 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Align, CtxRef, Label, Layout, TextEdit, Ui, Vec2, Window, Direction};
+use egui::{Align, CtxRef, Label, Layout, TextEdit, Ui, Vec2, Window};
 
-use crate::option_data::{BetweenFrameUiData, MemoryEditorOptions};
+use crate::option_data::{BetweenFrameData, MemoryEditorOptions};
 
 mod list_clipper;
 pub mod option_data;
@@ -41,7 +41,7 @@ pub struct MemoryEditor<T> {
     /// Can optionally be serialized/deserialized with `serde`
     pub options: MemoryEditorOptions,
     /// Data for layout between frames, rather hacky.
-    frame_data: BetweenFrameUiData,
+    frame_data: BetweenFrameData,
 }
 
 impl<T> MemoryEditor<T> {
@@ -128,8 +128,8 @@ impl<T> MemoryEditor<T> {
                         for start_row in line_range.clone() {
                             let start_address = address_space.start + (start_row * column_count);
                             ui.add(Label::new(format!("0x{:01$X}:", start_address, address_characters))
-                                    .text_color(address_text_colour)
-                                    .text_style(memory_editor_address_text_style));
+                                .text_color(address_text_colour)
+                                .text_style(memory_editor_address_text_style));
 
                             self.draw_memory_values(ui, memory, start_address, &address_space);
 
@@ -168,16 +168,6 @@ impl<T> MemoryEditor<T> {
 
                     let mem_val: u8 = read_function(memory, memory_address);
 
-                    let mut text_colour = if options.show_zero_colour && mem_val == 0 {
-                        options.zero_colour
-                    } else {
-                        column.style().visuals.text_color()
-                    };
-
-                    if frame_data.should_highlight(memory_address) {
-                        text_colour = options.highlight_colour;
-                    }
-
                     let label_text = format!("{:02X}", mem_val);
 
                     // Memory Value Labels
@@ -214,13 +204,26 @@ impl<T> MemoryEditor<T> {
                         }
                     } else {
                         // Read-only values.
+                        let mut label = Label::new(label_text)
+                            .text_style(options.memory_editor_text_style);
+
+                        label = if options.show_zero_colour && mem_val == 0 {
+                            label.text_color(options.zero_colour)
+                        } else {
+                            label.text_color(column.style().visuals.text_color())
+                        };
+
+                        if frame_data.should_highlight(memory_address) {
+                            label = label.text_color(options.highlight_colour);
+                        }
+
+                        if frame_data.should_subtle_highlight( memory_address, options.data_preview_options.selected_data_format) {
+                            label = label.background_color(column.style().visuals.code_bg_color);
+                        }
+
                         // This particular layout is necessary to stop the memory values gradually shifting over to the right
                         // Presumably due to some floating point error when using left_to_right()
-                        let response = column.with_layout(Layout::right_to_left(), |ui| {
-                            ui.add(Label::new(label_text)
-                                       .text_color(text_colour)
-                                       .text_style(options.memory_editor_text_style))
-                        });
+                        let response = column.with_layout(Layout::right_to_left(), |ui| ui.add(label));
                         // Right click always selects.
                         if response.inner.secondary_clicked() {
                             frame_data.set_highlight_address(memory_address);
@@ -258,10 +261,10 @@ impl<T> MemoryEditor<T> {
                     let mut label = egui::Label::new(character).text_style(options.memory_editor_ascii_text_style);
 
                     if self.frame_data.should_highlight(memory_address) {
-                        label = label
-                            .background_color(column.visuals().code_bg_color)
-                            .text_color(options.highlight_colour);
+                        label = label.text_color(self.options.highlight_colour)
+                            .background_color(column.style().visuals.code_bg_color);
                     }
+
                     column.with_layout(Layout::bottom_up(Align::Center), |ui| {
                         ui.add(label);
                     });
