@@ -174,7 +174,7 @@ impl<T> MemoryEditor<T> {
                     let label_text = format!("{:02X}", mem_val);
 
                     // Memory Value Labels
-                    if !read_only && frame_data.selected_edit_address.unwrap() == memory_address {
+                    if !read_only && matches!(frame_data.selected_edit_address, Some(address) if address == memory_address) {
                         // For Editing
                         let response = column.with_layout(Layout::right_to_left(), |ui| {
                             ui.add(TextEdit::singleline(&mut frame_data.selected_edit_address_string)
@@ -278,9 +278,9 @@ impl<T> MemoryEditor<T> {
 
     /// Return the line height for the current provided `Ui` and selected `TextStyle`s
     fn get_line_height(&self, ui: &mut Ui) -> f32 {
-        let address_size = Label::new("##invisible").text_style(self.options.memory_editor_address_text_style).layout(ui).size.y;
-        let body_size = Label::new("##invisible").text_style(self.options.memory_editor_text_style).layout(ui).size.y;
-        let ascii_size = Label::new("##invisible").text_style(self.options.memory_editor_ascii_text_style).layout(ui).size.y;
+        let address_size = ui.fonts()[self.options.memory_editor_address_text_style].row_height();
+        let body_size = ui.fonts()[self.options.memory_editor_text_style].row_height();
+        let ascii_size = ui.fonts()[self.options.memory_editor_ascii_text_style].row_height();
         address_size.max(body_size).max(ascii_size) + ui.style().spacing.item_spacing.y
     }
 
