@@ -1,3 +1,9 @@
+//! # Egui Memory Editor
+//!
+//! Provides a memory editor to be used with `egui`.
+//! Primarily intended for emulation development.
+//!
+//! Look at [`MemoryEditor`] to get started.
 use std::collections::BTreeMap;
 use std::ops::Range;
 
