@@ -29,17 +29,17 @@ impl<T> MemoryEditor<T> {
             if self.frame_data.memory_range_combo_box_enabled {
                 let selected_address_range = &mut self.options.selected_address_range;
                 let address_ranges = &self.address_ranges;
-                egui::combo_box_with_label(ui, "Memory Region", selected_address_range.clone(), |ui| {
+                egui::ComboBox::from_label("Memory Region").selected_text(selected_address_range.clone()).show_ui(ui, |ui| {
                     address_ranges.iter().for_each(|(range_name, _)| {
                         ui.selectable_value(selected_address_range, range_name.clone(), range_name);
                     });
                 });
-            }
+            };
 
             // Column dragger
             let mut columns_u8 = self.options.column_count as u8;
             ui.add(
-                egui::DragValue::u8(&mut columns_u8)
+                egui::DragValue::new(&mut columns_u8)
                     .clamp_range(1.0..=64.0)
                     .prefix("Columns: ")
                     .speed(0.5),
@@ -57,7 +57,7 @@ impl<T> MemoryEditor<T> {
 
             self.frame_data.goto_address_string.retain(|c| c.is_ascii_hexdigit());
 
-            if response.lost_kb_focus() && ui.input().key_pressed(egui::Key::Enter) {
+            if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
                 let goto_address_string = &mut self.frame_data.goto_address_string;
                 if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
                     *goto_address_string = goto_address_string[2..].to_string();
@@ -88,12 +88,12 @@ impl<T> MemoryEditor<T> {
             egui::Grid::new("data_preview_grid").show(ui, |ui| {
                 let data_preview_options = &mut self.options.data_preview_options;
                 // Format selection
-                egui::combo_box_with_label(ui, "Endianness", format!("{:?}", data_preview_options.selected_endianness), |ui| {
+                egui::ComboBox::from_label("Endianness").selected_text(format!("{:?}", data_preview_options.selected_endianness)).show_ui(ui, |ui| {
                     for endian in Endianness::iter() {
                         ui.selectable_value(&mut data_preview_options.selected_endianness, endian, format!("{:?}", endian));
                     }
-                }).on_hover_text("Select the endianness for the data interpretation");
-                egui::combo_box_with_label(ui, "Format", format!("{:?}", data_preview_options.selected_data_format), |ui| {
+                }).on_hover_text("Select the number type for data interpretation");
+                egui::ComboBox::from_label("Format").selected_text(format!("{:?}", data_preview_options.selected_data_format)).show_ui(ui, |ui| {
                     for format in DataFormatType::iter() {
                         ui.selectable_value(&mut data_preview_options.selected_data_format, format, format!("{:?}", format));
                     }

@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Align, CtxRef, Label, Layout, TextEdit, Ui, Vec2, Window};
+use egui::{Align, CtxRef, Label, Layout, TextEdit, Ui, Vec2, Window, Sense};
 
 use crate::option_data::{BetweenFrameData, MemoryEditorOptions};
 
@@ -189,7 +189,7 @@ impl<T> MemoryEditor<T> {
                         });
                         if frame_data.selected_edit_address_request_focus {
                             frame_data.selected_edit_address_request_focus = false;
-                            column.memory().request_kb_focus(response.inner.id);
+                            column.memory().request_focus(response.inner.id);
                         }
 
                         // Filter out any non Hex-Digit, there doesn't seem to be a method in TextEdit for this.
@@ -205,7 +205,7 @@ impl<T> MemoryEditor<T> {
                             }
 
                             frame_data.set_selected_edit_address(Some(next_address), address_space);
-                        } else if !column.ctx().memory().has_kb_focus(response.inner.id) {
+                        } else if !column.ctx().memory().has_focus(response.inner.id) {
                             // We use has_kb_focus() instead of response.inner.lost_kb_focus() due to the latter
                             // having a bug where it doesn't detect it lost focus when you scroll.
                             frame_data.set_selected_edit_address(None, address_space);
@@ -214,7 +214,8 @@ impl<T> MemoryEditor<T> {
                     } else {
                         // Read-only values.
                         let mut label = Label::new(label_text)
-                            .text_style(options.memory_editor_text_style);
+                            .text_style(options.memory_editor_text_style)
+                            .sense(Sense::click());
 
                         label = if options.show_zero_colour && mem_val == 0 {
                             label.text_color(options.zero_colour)
@@ -255,7 +256,7 @@ impl<T> MemoryEditor<T> {
         let options = &self.options;
         // Not pretty atm, needs a better method: TODO
         ui.horizontal(|ui| {
-            ui.add(egui::Separator::new().vertical().spacing(3.0));
+            ui.add(egui::Separator::default().vertical().spacing(3.0));
             ui.style_mut().spacing.item_spacing.x = 0.0;
             ui.columns(options.column_count, |columns| {
                 for (i, column) in columns.iter_mut().enumerate() {
