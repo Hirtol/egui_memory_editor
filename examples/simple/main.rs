@@ -1,6 +1,6 @@
 use crate::frame_history::FrameHistory;
 use eframe::egui::CtxRef;
-use eframe::epi;
+use eframe::{epi, NativeOptions};
 use eframe::epi::Frame;
 use egui_memory_editor::MemoryEditor;
 
@@ -8,7 +8,7 @@ mod frame_history;
 
 pub fn main() {
     let app = App::default();
-    eframe::run_native(Box::new(app));
+    eframe::run_native(Box::new(app), NativeOptions::default());
 }
 
 pub struct App {
@@ -78,7 +78,7 @@ impl Memory {
 
 fn create_frame_history(ctx: &CtxRef, frame: &Frame<'_>, frame_history: &mut FrameHistory) {
     frame_history.on_new_frame(ctx.input().time, frame.info().cpu_usage);
-    egui::SidePanel::left("SidePanel", 300.0).show(ctx, |ui| {
+    egui::SidePanel::left("SidePanel").show(ctx, |ui| {
         frame_history.ui(ui);
     });
 }
