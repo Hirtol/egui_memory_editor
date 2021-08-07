@@ -1,5 +1,5 @@
 # Egui Memory Editor
-[![Crates io link](https://meritbadge.herokuapp.com/egui_memory_editor)](https://crates.io/crates/egui_memory_editor)
+[![Crates io link](https://img.shields.io/crates/v/egui_memory_editor.svg)](https://crates.io/crates/egui_memory_editor)
 [![Documentation on docs.rs](https://docs.rs/egui_memory_editor/badge.svg)](https://docs.rs/egui_memory_editor)
 
 This is a simple memory editor/viewer utility for the immediate mode UI library [egui](https://crates.io/crates/egui)

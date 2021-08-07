@@ -206,7 +206,7 @@ impl<T> MemoryEditor<T> {
 
                             frame_data.set_selected_edit_address(Some(next_address), address_space);
                         } else if !column.ctx().memory().has_focus(response.inner.id) {
-                            // We use has_kb_focus() instead of response.inner.lost_kb_focus() due to the latter
+                            // We use has_focus() instead of response.inner.lost_focus() due to the latter
                             // having a bug where it doesn't detect it lost focus when you scroll.
                             frame_data.set_selected_edit_address(None, address_space);
                             read_only = true;
