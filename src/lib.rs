@@ -312,7 +312,7 @@ impl<T> MemoryEditor<T> {
                 ArrowDown => current_address + self.options.column_count,
                 ArrowLeft => current_address - 1,
                 ArrowRight => current_address + 1,
-                ArrowUp => current_address - self.options.column_count,
+                ArrowUp => if current_address < self.options.column_count { 0 } else { current_address - self.options.column_count },
                 _ => unreachable!()
             };
 
