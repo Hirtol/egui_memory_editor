@@ -99,7 +99,7 @@ impl<T> MemoryEditor<T> {
     ///
     /// Use [`Self::window_ui`] if you want to have a window with the contents instead.
     pub fn draw_editor_contents(&mut self, ui: &mut Ui, memory: &mut T) {
-        assert!(self.address_ranges.len() > 0, "At least one address range needs to be added to render the contents!");
+        assert!(!self.address_ranges.is_empty(), "At least one address range needs to be added to render the contents!");
 
         self.draw_options_area(ui, memory);
 
@@ -267,7 +267,7 @@ impl<T> MemoryEditor<T> {
                     }
 
                     let mem_val: u8 = (self.read_function)(memory, memory_address);
-                    let character = if mem_val < 32 || mem_val >= 128 { '.' } else { mem_val as char };
+                    let character = if !(32..128).contains(&mem_val) { '.' } else { mem_val as char };
                     let mut label = egui::Label::new(character).text_style(options.memory_editor_ascii_text_style);
 
                     if self.frame_data.should_highlight(memory_address) {
@@ -306,7 +306,7 @@ impl<T> MemoryEditor<T> {
         // We know it must exist otherwise this function can't be called, so safe to unwrap.
         let current_address = self.frame_data.selected_edit_address.unwrap();
         let keys = [ArrowLeft, ArrowRight, ArrowDown, ArrowUp];
-        let key_pressed = keys.iter().filter(|&&k| ctx.input().key_pressed(k)).next();
+        let key_pressed = keys.iter().find(|&&k| ctx.input().key_pressed(k));
         if let Some(key) = key_pressed {
             let next_address = match key {
                 ArrowDown => current_address + self.options.column_count,
