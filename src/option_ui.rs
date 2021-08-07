@@ -38,12 +38,19 @@ impl<T> MemoryEditor<T> {
 
             // Column dragger
             let mut columns_u8 = self.options.column_count as u8;
-            ui.add(
-                egui::DragValue::new(&mut columns_u8)
-                    .clamp_range(1.0..=64.0)
-                    .prefix("Columns: ")
-                    .speed(0.5),
-            );
+            if self.options.is_resizable_column {
+                ui.add(
+                    egui::DragValue::new(&mut columns_u8)
+                        .clamp_range(1.0..=64.0)
+                        .prefix("Columns: ")
+                        .speed(0.5),
+                );
+            }
+            else {
+                ui.add(
+                    egui::Label::new(format!("Columns: {}", columns_u8))
+                );
+            }
             self.options.column_count = columns_u8 as usize;
 
             // Goto address

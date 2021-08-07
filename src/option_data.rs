@@ -79,6 +79,8 @@ pub struct MemoryEditorOptions {
     ///
     /// At the moment, you'll at most be able to display the range: `0..2^(24 + log_2(column_count))`.
     pub column_count: usize,
+    /// Whether column size can be modified.
+    pub is_resizable_column: bool,
     /// A custom colour for `0x00`. By default will be grey.
     pub zero_colour: Color32,
     /// The colour for address indicators on the very left of the UI.
@@ -107,6 +109,7 @@ impl Default for MemoryEditorOptions {
             show_ascii_sidebar: true,
             show_zero_colour: true,
             zero_colour: Color32::from_gray(80),
+            is_resizable_column: true,
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
             highlight_colour: Color32::from_rgb(0, 140, 140),
