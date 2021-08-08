@@ -14,7 +14,7 @@ impl<T> MemoryEditor<T> {
             .clone();
 
         egui::CollapsingHeader::new("🛠 Options")
-            .default_open(true)
+            .default_open(!self.options.is_options_collapsed)
             .show(ui, |ui| {
                 self.draw_main_options(ui, &current_address_range);
 
@@ -38,12 +38,19 @@ impl<T> MemoryEditor<T> {
 
             // Column dragger
             let mut columns_u8 = self.options.column_count as u8;
-            ui.add(
-                egui::DragValue::new(&mut columns_u8)
-                    .clamp_range(1.0..=64.0)
-                    .prefix("Columns: ")
-                    .speed(0.5),
-            );
+            if self.options.is_resizable_column {
+                ui.add(
+                    egui::DragValue::new(&mut columns_u8)
+                        .clamp_range(1.0..=64.0)
+                        .prefix("Columns: ")
+                        .speed(0.5),
+                );
+            }
+            else {
+                ui.add(
+                    egui::Label::new(format!("Columns: {}", columns_u8))
+                );
+            }
             self.options.column_count = columns_u8 as usize;
 
             // Goto address
@@ -109,7 +116,7 @@ impl<T> MemoryEditor<T> {
                 let hover_text = "Right click a value in the UI to select it, right click again to unselect";
 
                 if let Some(address) = self.frame_data.selected_highlight_address {
-                    let value = Self::read_mem_value(self.read_function, address, *data_preview_options, &current_address_range, memory);
+                    let value = Self::read_mem_value(self.read_function, address, *data_preview_options, current_address_range, memory);
                     ui.label(format!("Value at {:#X} (decimal): ", address)).on_hover_text(hover_text);
                     ui.label(value);
                 } else {

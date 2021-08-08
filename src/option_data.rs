@@ -73,12 +73,18 @@ pub struct MemoryEditorOptions {
     pub show_ascii_sidebar: bool,
     /// Whether `0x00` values in the main UI should use the [`MemoryEditorOptions::zero_colour`].
     pub show_zero_colour: bool,
+    /// Whether the options header is collapsed by default or not.
+    /// Default is `false`.
+    pub is_options_collapsed: bool,
     /// The options which determine how to interpret selected data, concerning endianness and number type.
     pub data_preview_options: DataPreviewOptions,
     /// The amount of columns for the main UI, this amount directly impacts the possible size of your address space.
     ///
     /// At the moment, you'll at most be able to display the range: `0..2^(24 + log_2(column_count))`.
     pub column_count: usize,
+    /// Whether column size can be modified
+    /// Default is `true`.
+    pub is_resizable_column: bool,
     /// A custom colour for `0x00`. By default will be grey.
     pub zero_colour: Color32,
     /// The colour for address indicators on the very left of the UI.
@@ -106,7 +112,9 @@ impl Default for MemoryEditorOptions {
             data_preview_options: Default::default(),
             show_ascii_sidebar: true,
             show_zero_colour: true,
+            is_options_collapsed: false,
             zero_colour: Color32::from_gray(80),
+            is_resizable_column: true,
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
             highlight_colour: Color32::from_rgb(0, 140, 140),
