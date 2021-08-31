@@ -103,12 +103,12 @@ impl<T> MemoryEditor<T> {
                     for endian in Endianness::iter() {
                         ui.selectable_value(&mut data_preview_options.selected_endianness, endian, format!("{:?}", endian));
                     }
-                }).on_hover_text("Select the number type for data interpretation");
+                }).response.on_hover_text("Select the number type for data interpretation");
                 egui::ComboBox::from_label("Format").selected_text(format!("{:?}", data_preview_options.selected_data_format)).show_ui(ui, |ui| {
                     for format in DataFormatType::iter() {
                         ui.selectable_value(&mut data_preview_options.selected_data_format, format, format!("{:?}", format));
                     }
-                }).on_hover_text("Select the number type for data interpretation");
+                }).response.on_hover_text("Select the number type for data interpretation");
 
                 ui.end_row();
 
