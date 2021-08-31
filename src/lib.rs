@@ -183,7 +183,7 @@ impl<T> MemoryEditor<T> {
                     if !read_only && matches!(frame_data.selected_edit_address, Some(address) if address == memory_address) {
                         // For Editing
                         let response = column.with_layout(Layout::right_to_left(), |ui| {
-                            ui.add(TextEdit::singleline(&mut frame_data.selected_edit_address_string)
+                            ui.add(TextEdit::singleline(&mut frame_data.selected_edit_address_string).desired_width(6.0)
                                 .text_style(options.memory_editor_text_style)
                                 .hint_text(label_text))
                         });
