@@ -18,10 +18,10 @@ default = []
 persistence = ["serde", "egui/persistence"]
 
 [dependencies]
-egui = "0.13.1"
+egui = "0.14.2"
 
 [dev-dependencies]
-eframe = "0.13.1"
+eframe = "0.14.0"
 
 [dependencies.serde]
 version = "^1.0.123"
