@@ -102,7 +102,7 @@ impl ScrollAreaClipper {
         ui.allocate_space(Vec2::new(0.0, start.min(self.theoretical_max_height as f32)));
         // Need to manually scroll to the start line
         if self.start_line.is_some() {
-            ui.scroll_to_cursor(Align::TOP);
+            ui.scroll_to_cursor(Align::Center);
         }
     }
 

@@ -136,9 +136,11 @@ impl<T> MemoryEditor<T> {
 
                         for start_row in line_range.clone() {
                             let start_address = address_space.start + (start_row * column_count);
-                            ui.add(Label::new(format!("0x{:01$X}:", start_address, address_characters))
-                                .text_color(address_text_colour)
-                                .text_style(memory_editor_address_text_style));
+                            ui.add(
+                                Label::new(format!("0x{:01$X}:", start_address, address_characters))
+                                    .text_color(address_text_colour)
+                                    .text_style(memory_editor_address_text_style),
+                            );
 
                             self.draw_memory_values(ui, memory, start_address, &address_space);
 
@@ -183,9 +185,12 @@ impl<T> MemoryEditor<T> {
                     if !read_only && matches!(frame_data.selected_edit_address, Some(address) if address == memory_address) {
                         // For Editing
                         let response = column.with_layout(Layout::right_to_left(), |ui| {
-                            ui.add(TextEdit::singleline(&mut frame_data.selected_edit_address_string)
-                                .text_style(options.memory_editor_text_style)
-                                .hint_text(label_text))
+                            ui.add(
+                                TextEdit::singleline(&mut frame_data.selected_edit_address_string)
+                                    .desired_width(6.0)
+                                    .text_style(options.memory_editor_text_style)
+                                    .hint_text(label_text),
+                            )
                         });
                         if frame_data.selected_edit_address_request_focus {
                             frame_data.selected_edit_address_request_focus = false;
@@ -193,7 +198,9 @@ impl<T> MemoryEditor<T> {
                         }
 
                         // Filter out any non Hex-Digit, there doesn't seem to be a method in TextEdit for this.
-                        frame_data.selected_edit_address_string.retain(|c| c.is_ascii_hexdigit());
+                        frame_data
+                            .selected_edit_address_string
+                            .retain(|c| c.is_ascii_hexdigit());
 
                         // Don't want more than 2 digits
                         if frame_data.selected_edit_address_string.chars().count() >= 2 {
@@ -312,8 +319,14 @@ impl<T> MemoryEditor<T> {
                 ArrowDown => current_address + self.options.column_count,
                 ArrowLeft => current_address - 1,
                 ArrowRight => current_address + 1,
-                ArrowUp => if current_address < self.options.column_count { 0 } else { current_address - self.options.column_count },
-                _ => unreachable!()
+                ArrowUp => {
+                    if current_address < self.options.column_count {
+                        0
+                    } else {
+                        current_address - self.options.column_count
+                    }
+                }
+                _ => unreachable!(),
             };
 
             self.frame_data.set_selected_edit_address(Some(next_address), address_range);

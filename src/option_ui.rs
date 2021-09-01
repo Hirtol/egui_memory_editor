@@ -58,15 +58,15 @@ impl<T> MemoryEditor<T> {
                 .on_hover_text("Goto an address, an address like 0xAA is written as AA\nPress enter to move to the address");
             ui.label(format!("Goto: {:#X?}", current_address_range));
 
+            self.frame_data.goto_address_string.retain(|c| c.is_ascii_hexdigit());
+
             // For some reason egui is triggering response.clicked() when we press enter at the moment
             // (didn't used to do this). The additional check for not having enter pressed will need to stay until that is fixed.
             if response.clicked() && !ui.input().key_pressed(egui::Key::Enter) {
                 self.frame_data.goto_address_string.clear();
             }
 
-            self.frame_data.goto_address_string.retain(|c| c.is_ascii_hexdigit());
-
-            if response.has_focus() && ui.input().key_pressed(egui::Key::Enter) {
+            if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
                 let goto_address_string = &mut self.frame_data.goto_address_string;
                 if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
                     *goto_address_string = goto_address_string[2..].to_string();
@@ -74,7 +74,8 @@ impl<T> MemoryEditor<T> {
                 let address = usize::from_str_radix(goto_address_string, 16);
 
                 self.frame_data.goto_address_line = address.clone().ok()
-                    .map(|addr| (addr - current_address_range.start) / self.options.column_count);
+                    .and_then(|addr| addr.checked_sub(current_address_range.start))
+                    .map(|addr| addr / self.options.column_count);
                 self.frame_data.selected_highlight_address = address.ok();
 
                 response.surrender_focus();
@@ -103,12 +104,12 @@ impl<T> MemoryEditor<T> {
                     for endian in Endianness::iter() {
                         ui.selectable_value(&mut data_preview_options.selected_endianness, endian, format!("{:?}", endian));
                     }
-                }).on_hover_text("Select the number type for data interpretation");
+                }).response.on_hover_text("Select the number type for data interpretation");
                 egui::ComboBox::from_label("Format").selected_text(format!("{:?}", data_preview_options.selected_data_format)).show_ui(ui, |ui| {
                     for format in DataFormatType::iter() {
                         ui.selectable_value(&mut data_preview_options.selected_data_format, format, format!("{:?}", format));
                     }
-                }).on_hover_text("Select the number type for data interpretation");
+                }).response.on_hover_text("Select the number type for data interpretation");
 
                 ui.end_row();
 
