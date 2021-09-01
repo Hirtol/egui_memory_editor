@@ -60,7 +60,13 @@ impl<T> MemoryEditor<T> {
 
             self.frame_data.goto_address_string.retain(|c| c.is_ascii_hexdigit());
 
-            if ui.input().key_pressed(egui::Key::Enter) {
+            // For some reason egui is triggering response.clicked() when we press enter at the moment
+            // (didn't used to do this). The additional check for not having enter pressed will need to stay until that is fixed.
+            if response.clicked() && !ui.input().key_pressed(egui::Key::Enter) {
+                self.frame_data.goto_address_string.clear();
+            }
+
+            if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
                 let goto_address_string = &mut self.frame_data.goto_address_string;
                 if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
                     *goto_address_string = goto_address_string[2..].to_string();
@@ -72,10 +78,6 @@ impl<T> MemoryEditor<T> {
                 self.frame_data.selected_highlight_address = address.ok();
 
                 response.surrender_focus();
-            }
-
-            if response.lost_focus() {
-                self.frame_data.goto_address_string.clear();
             }
 
             ui.end_row();
