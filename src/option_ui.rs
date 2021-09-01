@@ -74,7 +74,8 @@ impl<T> MemoryEditor<T> {
                 let address = usize::from_str_radix(goto_address_string, 16);
 
                 self.frame_data.goto_address_line = address.clone().ok()
-                    .map(|addr| (addr - current_address_range.start) / self.options.column_count);
+                    .and_then(|addr| addr.checked_sub(current_address_range.start))
+                    .map(|addr| addr / self.options.column_count);
                 self.frame_data.selected_highlight_address = address.ok();
 
                 response.surrender_focus();
