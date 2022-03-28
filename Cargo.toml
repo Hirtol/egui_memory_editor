@@ -12,16 +12,15 @@ keywords = ["egui", "memory", "editor", "emulator"]
 categories = ["gui"]
 exclude = ["assets/*", ".github/*"]
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 [features]
 default = []
 persistence = ["serde", "egui/persistence"]
 
 [dependencies]
-egui = "0.14.2"
+egui = "0.17"
 
 [dev-dependencies]
-eframe = "0.14.0"
+eframe = "0.17"
 
 [dependencies.serde]
 version = "^1.0.123"

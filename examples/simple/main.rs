@@ -1,7 +1,7 @@
 use crate::frame_history::FrameHistory;
-use eframe::egui::CtxRef;
-use eframe::{epi, NativeOptions};
 use eframe::epi::Frame;
+use eframe::{epi, NativeOptions};
+use egui::Context;
 use egui_memory_editor::MemoryEditor;
 
 mod frame_history;
@@ -41,7 +41,7 @@ impl Default for App {
 }
 
 impl epi::App for App {
-    fn update(&mut self, ctx: &CtxRef, frame: &mut Frame<'_>) {
+    fn update(&mut self, ctx: &Context, frame: &Frame) {
         create_frame_history(ctx, frame, &mut self.fh);
 
         // This will automatically check for `mem_editor.options.is_open`, so no need to do that here.
@@ -76,7 +76,7 @@ impl Memory {
     }
 }
 
-fn create_frame_history(ctx: &CtxRef, frame: &Frame<'_>, frame_history: &mut FrameHistory) {
+fn create_frame_history(ctx: &Context, frame: &Frame, frame_history: &mut FrameHistory) {
     frame_history.on_new_frame(ctx.input().time, frame.info().cpu_usage);
     egui::SidePanel::left("SidePanel").show(ctx, |ui| {
         frame_history.ui(ui);

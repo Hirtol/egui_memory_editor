@@ -70,14 +70,14 @@ pub struct MemoryEditorOptions {
     /// Used to check if the window is open, if you don't use the [`crate::MemoryEditor::window_ui`] call then this is irrelevant.
     pub is_open: bool,
     /// Whether to show the ASCII representation of all the `u8` values in the main UI.
-    pub show_ascii_sidebar: bool,
+    pub show_ascii: bool,
     /// Whether `0x00` values in the main UI should use the [`MemoryEditorOptions::zero_colour`].
     pub show_zero_colour: bool,
     /// Whether the options header is collapsed by default or not.
     /// Default is `false`.
     pub is_options_collapsed: bool,
     /// The options which determine how to interpret selected data, concerning endianness and number type.
-    pub data_preview_options: DataPreviewOptions,
+    pub data_preview: DataPreviewOptions,
     /// The amount of columns for the main UI, this amount directly impacts the possible size of your address space.
     ///
     /// At the moment, you'll at most be able to display the range: `0..2^(24 + log_2(column_count))`.
@@ -91,7 +91,7 @@ pub struct MemoryEditorOptions {
     pub address_text_colour: Color32,
     /// The highlight colour for both the main UI and the ASCII sidebar.
     /// This will be enabled when you right-click an address, or when using the `goto address` function in the UI.
-    pub highlight_colour: Color32,
+    pub highlight_text_colour: Color32,
     /// The [`egui::TextStyle`] for the main UI, indicating the values.
     /// Default is [`egui::TextStyle::Monospace`]
     pub memory_editor_text_style: TextStyle,
@@ -109,15 +109,15 @@ impl Default for MemoryEditorOptions {
     fn default() -> Self {
         MemoryEditorOptions {
             is_open: true,
-            data_preview_options: Default::default(),
-            show_ascii_sidebar: true,
+            data_preview: Default::default(),
+            show_ascii: true,
             show_zero_colour: true,
             is_options_collapsed: false,
             zero_colour: Color32::from_gray(80),
             is_resizable_column: true,
             column_count: 16,
             address_text_colour: Color32::from_rgb(125, 0, 125),
-            highlight_colour: Color32::from_rgb(0, 140, 140),
+            highlight_text_colour: Color32::from_rgb(0, 140, 140),
             memory_editor_text_style: TextStyle::Monospace,
             memory_editor_address_text_style: TextStyle::Monospace,
             memory_editor_ascii_text_style: TextStyle::Monospace,
@@ -150,7 +150,8 @@ pub(crate) struct BetweenFrameData {
 impl BetweenFrameData {
     pub fn set_highlight_address(&mut self, new_address: usize) {
         // We want to be able to unselect it.
-        self.selected_highlight_address = if matches!(self.selected_highlight_address, Some(current) if current == new_address) {
+        self.selected_highlight_address = if matches!(self.selected_highlight_address, Some(current) if current == new_address)
+        {
             self.goto_address_string.clear();
             None
         } else {
@@ -177,8 +178,9 @@ impl BetweenFrameData {
     }
 
     pub fn should_subtle_highlight(&self, address: usize, data_format: DataFormatType) -> bool {
-        self.show_additional_highlights && self.selected_highlight_address.map_or(false, |addr| {
-            (addr..addr+data_format.bytes_to_read()).contains(&address)
-        })
+        self.show_additional_highlights
+            && self.selected_highlight_address.map_or(false, |addr| {
+                (addr..addr + data_format.bytes_to_read()).contains(&address)
+            })
     }
 }

@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Align, CtxRef, Label, Layout, TextEdit, Ui, Vec2, Window, Sense};
+use egui::{Align, Context, Label, Layout, RichText, ScrollArea, Sense, TextEdit, Ui, Vec2, Window};
 
 use crate::option_data::{BetweenFrameData, MemoryEditorOptions};
 
@@ -78,12 +78,13 @@ impl<T> MemoryEditor<T> {
     /// Create a window and render the memory editor contents within.
     ///
     /// If you want to make your own window/container to be used for the editor contents, you can use [`Self::draw_editor_contents`].
-    pub fn window_ui(&mut self, ctx: &CtxRef, memory: &mut T) {
+    pub fn window_ui(&mut self, ctx: &Context, memory: &mut T) {
         let mut is_open = self.options.is_open;
 
         Window::new(self.window_name.clone())
             .open(&mut is_open)
-            .scroll(false)
+            .hscroll(false)
+            .vscroll(false)
             .resizable(true)
             .show(ctx, |ui| {
                 self.shrink_window_ui(ui);
@@ -99,16 +100,20 @@ impl<T> MemoryEditor<T> {
     ///
     /// Use [`Self::window_ui`] if you want to have a window with the contents instead.
     pub fn draw_editor_contents(&mut self, ui: &mut Ui, memory: &mut T) {
-        assert!(!self.address_ranges.is_empty(), "At least one address range needs to be added to render the contents!");
+        assert!(
+            !self.address_ranges.is_empty(),
+            "At least one address range needs to be added to render the contents!"
+        );
 
         self.draw_options_area(ui, memory);
 
         ui.separator();
 
         let MemoryEditorOptions {
-            show_ascii_sidebar,
+            show_ascii,
             column_count,
             address_text_colour,
+            highlight_text_colour,
             selected_address_range,
             memory_editor_address_text_style,
             ..
@@ -124,9 +129,11 @@ impl<T> MemoryEditor<T> {
         // For when we're editing memory, don't use the `Response` object as that would screw over downward scrolling.
         self.handle_keyboard_edit_input(&address_space, ui.ctx());
 
-        list_clipper::ClippedScrollArea::auto_sized(max_lines, line_height)
-            .with_start_line(std::mem::take(&mut self.frame_data.goto_address_line))
-            .show(ui, |ui, line_range| {
+        let clipper = list_clipper::ScrollAreaClipper::new(max_lines, line_height)
+            .with_start_line(std::mem::take(&mut self.frame_data.goto_address_line));
+
+        ScrollArea::vertical().max_height(f32::INFINITY).auto_shrink([false, true]).show(ui, |ui| {
+            clipper.show(ui, |ui, line_range| {
                 egui::Grid::new("mem_edit_grid")
                     .striped(true)
                     .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
@@ -136,15 +143,18 @@ impl<T> MemoryEditor<T> {
 
                         for start_row in line_range.clone() {
                             let start_address = address_space.start + (start_row * column_count);
-                            ui.add(
-                                Label::new(format!("0x{:01$X}:", start_address, address_characters))
-                                    .text_color(address_text_colour)
-                                    .text_style(memory_editor_address_text_style),
-                            );
+                            let line_range = start_address..start_address + column_count;
+                            let highlight_in_range = matches!(self.frame_data.selected_highlight_address, Some(address) if line_range.contains(&address));
+
+                            let start_text = RichText::new(format!("0x{:01$X}:", start_address, address_characters))
+                                .color(if highlight_in_range { highlight_text_colour } else { address_text_colour })
+                                .text_style(memory_editor_address_text_style.clone());
+
+                            ui.label(start_text);
 
                             self.draw_memory_values(ui, memory, start_address, &address_space);
 
-                            if show_ascii_sidebar {
+                            if show_ascii {
                                 self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
                             }
 
@@ -154,7 +164,8 @@ impl<T> MemoryEditor<T> {
                 // After we've drawn the area we want to resize to we want to save this size for the next frame.
                 // In case it has became smaller we'll shrink the window.
                 self.frame_data.previous_frame_editor_width = ui.min_rect().width();
-            });
+            })
+        });
     }
 
     fn draw_memory_values(&mut self, ui: &mut Ui, memory: &mut T, start_address: usize, address_space: &Range<usize>) {
@@ -164,7 +175,8 @@ impl<T> MemoryEditor<T> {
         let write_function = &self.write_function;
         let mut read_only = frame_data.selected_edit_address.is_none() || write_function.is_none();
 
-        for grid_column in 0..(options.column_count + 7) / 8 { // div_ceil
+        for grid_column in 0..(options.column_count + 7) / 8 {
+            // div_ceil
             let start_address = start_address + 8 * grid_column;
             // We use columns here instead of horizontal_for_text() to keep consistent spacing for non-monospace fonts.
             // When fonts are more customizable (e.g, we can accept a `Font` as a setting instead of `TextStyle`) I'd like
@@ -182,13 +194,15 @@ impl<T> MemoryEditor<T> {
                     let label_text = format!("{:02X}", mem_val);
 
                     // Memory Value Labels
-                    if !read_only && matches!(frame_data.selected_edit_address, Some(address) if address == memory_address) {
+                    if !read_only
+                        && matches!(frame_data.selected_edit_address, Some(address) if address == memory_address)
+                    {
                         // For Editing
                         let response = column.with_layout(Layout::right_to_left(), |ui| {
                             ui.add(
                                 TextEdit::singleline(&mut frame_data.selected_edit_address_string)
                                     .desired_width(6.0)
-                                    .text_style(options.memory_editor_text_style)
+                                    .font(options.memory_editor_text_style.clone())
                                     .hint_text(label_text),
                             )
                         });
@@ -220,23 +234,24 @@ impl<T> MemoryEditor<T> {
                         }
                     } else {
                         // Read-only values.
-                        let mut label = Label::new(label_text)
-                            .text_style(options.memory_editor_text_style)
-                            .sense(Sense::click());
+                        let mut text = RichText::new(label_text).text_style(options.memory_editor_text_style.clone());
 
-                        label = if options.show_zero_colour && mem_val == 0 {
-                            label.text_color(options.zero_colour)
+                        if options.show_zero_colour && mem_val == 0 {
+                            text = text.color(options.zero_colour);
                         } else {
-                            label.text_color(column.style().visuals.text_color())
+                            text = text.color(column.style().visuals.text_color());
                         };
 
                         if frame_data.should_highlight(memory_address) {
-                            label = label.text_color(options.highlight_colour);
+                            text = text.color(options.highlight_text_colour);
                         }
 
-                        if frame_data.should_subtle_highlight( memory_address, options.data_preview_options.selected_data_format) {
-                            label = label.background_color(column.style().visuals.code_bg_color);
+                        if frame_data.should_subtle_highlight(memory_address, options.data_preview.selected_data_format)
+                        {
+                            text = text.background_color(column.style().visuals.code_bg_color);
                         }
+
+                        let label = Label::new(text).sense(Sense::click());
 
                         // This particular layout is necessary to stop the memory values gradually shifting over to the right
                         // Presumably due to some floating point error when using left_to_right()
@@ -274,16 +289,21 @@ impl<T> MemoryEditor<T> {
                     }
 
                     let mem_val: u8 = (self.read_function)(memory, memory_address);
-                    let character = if !(32..128).contains(&mem_val) { '.' } else { mem_val as char };
-                    let mut label = egui::Label::new(character).text_style(options.memory_editor_ascii_text_style);
+                    let character = if !(32..128).contains(&mem_val) {
+                        '.'
+                    } else {
+                        mem_val as char
+                    };
+                    let mut text = RichText::new(character).text_style(options.memory_editor_ascii_text_style.clone());
 
                     if self.frame_data.should_highlight(memory_address) {
-                        label = label.text_color(self.options.highlight_colour)
+                        text = text
+                            .color(self.options.highlight_text_colour)
                             .background_color(column.style().visuals.code_bg_color);
                     }
 
                     column.with_layout(Layout::bottom_up(Align::Center), |ui| {
-                        ui.add(label);
+                        ui.label(text);
                     });
                 }
             });
@@ -292,20 +312,20 @@ impl<T> MemoryEditor<T> {
 
     /// Return the line height for the current provided `Ui` and selected `TextStyle`s
     fn get_line_height(&self, ui: &mut Ui) -> f32 {
-        let address_size = ui.fonts()[self.options.memory_editor_address_text_style].row_height();
-        let body_size = ui.fonts()[self.options.memory_editor_text_style].row_height();
-        let ascii_size = ui.fonts()[self.options.memory_editor_ascii_text_style].row_height();
+        let address_size = ui.text_style_height(&self.options.memory_editor_address_text_style);
+        let body_size = ui.text_style_height(&self.options.memory_editor_text_style);
+        let ascii_size = ui.text_style_height(&self.options.memory_editor_ascii_text_style);
         address_size.max(body_size).max(ascii_size) + ui.style().spacing.item_spacing.y
     }
 
     /// Shrink the window to the previous frame's memory viewer's width.
     /// This essentially allows us to only have height resize, and have width grow/shrink as appropriate.
     fn shrink_window_ui(&self, ui: &mut Ui) {
-        ui.set_max_width(ui.min_rect().width().max(self.frame_data.previous_frame_editor_width));
+        ui.set_max_width(ui.min_rect().width().min(self.frame_data.previous_frame_editor_width));
     }
 
     /// Check for arrow keys when we're editing a memory value at an address.
-    fn handle_keyboard_edit_input(&mut self, address_range: &Range<usize>, ctx: &CtxRef) {
+    fn handle_keyboard_edit_input(&mut self, address_range: &Range<usize>, ctx: &Context) {
         use egui::Key::*;
         if self.frame_data.selected_edit_address.is_none() {
             return;
@@ -329,7 +349,8 @@ impl<T> MemoryEditor<T> {
                 _ => unreachable!(),
             };
 
-            self.frame_data.set_selected_edit_address(Some(next_address), address_range);
+            self.frame_data
+                .set_selected_edit_address(Some(next_address), address_range);
             // Follow the edit cursor whilst moving with the arrow keys.
             //self.frame_data.goto_address_line = Some(next_address / self.options.column_count);
         }

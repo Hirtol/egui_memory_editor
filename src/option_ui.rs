@@ -2,13 +2,14 @@ use std::ops::Range;
 
 use egui::Ui;
 
-use crate::{MemoryEditor, ReadFunction};
 use crate::option_data::{DataFormatType, DataPreviewOptions, Endianness};
+use crate::{MemoryEditor, ReadFunction};
 
 impl<T> MemoryEditor<T> {
     /// Draw the `Options` collapsing header with the main options and data preview hidden underneath.
     pub(crate) fn draw_options_area(&mut self, ui: &mut Ui, memory: &mut T) {
-        let current_address_range = self.address_ranges
+        let current_address_range = self
+            .address_ranges
             .get(&self.options.selected_address_range)
             .unwrap()
             .clone();
@@ -29,15 +30,19 @@ impl<T> MemoryEditor<T> {
             if self.frame_data.memory_range_combo_box_enabled {
                 let selected_address_range = &mut self.options.selected_address_range;
                 let address_ranges = &self.address_ranges;
-                egui::ComboBox::from_label("Memory Region").selected_text(selected_address_range.clone()).show_ui(ui, |ui| {
-                    address_ranges.iter().for_each(|(range_name, _)| {
-                        ui.selectable_value(selected_address_range, range_name.clone(), range_name);
+
+                egui::ComboBox::from_label("Region")
+                    .selected_text(selected_address_range.clone())
+                    .show_ui(ui, |ui| {
+                        address_ranges.iter().for_each(|(range_name, _)| {
+                            ui.selectable_value(selected_address_range, range_name.clone(), range_name);
+                        });
                     });
-                });
             };
 
             // Column dragger
             let mut columns_u8 = self.options.column_count as u8;
+
             if self.options.is_resizable_column {
                 ui.add(
                     egui::DragValue::new(&mut columns_u8)
@@ -45,17 +50,18 @@ impl<T> MemoryEditor<T> {
                         .prefix("Columns: ")
                         .speed(0.5),
                 );
+            } else {
+                ui.add(egui::Label::new(format!("Columns: {}", columns_u8)));
             }
-            else {
-                ui.add(
-                    egui::Label::new(format!("Columns: {}", columns_u8))
-                );
-            }
+
             self.options.column_count = columns_u8 as usize;
 
             // Goto address
-            let response = ui.add(egui::TextEdit::singleline(&mut self.frame_data.goto_address_string).hint_text("0000"))
-                .on_hover_text("Goto an address, an address like 0xAA is written as AA\nPress enter to move to the address");
+            let response = ui
+                .add(egui::TextEdit::singleline(&mut self.frame_data.goto_address_string).hint_text("0000"))
+                .on_hover_text(
+                    "Goto an address, an address like 0xAA is written as AA\nPress enter to move to the address",
+                );
             ui.label(format!("Goto: {:#X?}", current_address_range));
 
             self.frame_data.goto_address_string.retain(|c| c.is_ascii_hexdigit());
@@ -66,14 +72,19 @@ impl<T> MemoryEditor<T> {
                 self.frame_data.goto_address_string.clear();
             }
 
+            // If we pressed enter, move to the address
             if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
                 let goto_address_string = &mut self.frame_data.goto_address_string;
+
                 if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
                     *goto_address_string = goto_address_string[2..].to_string();
                 }
+
                 let address = usize::from_str_radix(goto_address_string, 16);
 
-                self.frame_data.goto_address_line = address.clone().ok()
+                self.frame_data.goto_address_line = address
+                    .clone()
+                    .ok()
                     .and_then(|addr| addr.checked_sub(current_address_range.start))
                     .map(|addr| addr / self.options.column_count);
                 self.frame_data.selected_highlight_address = address.ok();
@@ -84,11 +95,13 @@ impl<T> MemoryEditor<T> {
             ui.end_row();
 
             // Checkboxes
-            let show_ascii_sidebar = &mut self.options.show_ascii_sidebar;
+            let show_ascii_sidebar = &mut self.options.show_ascii;
             let show_zero_colour = &mut self.options.show_zero_colour;
 
-            ui.checkbox(show_ascii_sidebar, "Show ASCII")
-                .on_hover_text(format!("{} the ASCII representation view", if *show_ascii_sidebar { "Disable" } else { "Enable" }));
+            ui.checkbox(show_ascii_sidebar, "Show ASCII").on_hover_text(format!(
+                "{} the ASCII representation view",
+                if *show_ascii_sidebar { "Disable" } else { "Enable" }
+            ));
             ui.checkbox(show_zero_colour, "Custom zero colour")
                 .on_hover_text("If enabled memory values of '0x00' will be coloured differently");
         });
@@ -96,43 +109,74 @@ impl<T> MemoryEditor<T> {
 
     /// Draws the data preview underneath a collapsing header.
     fn draw_data_preview(&mut self, ui: &mut Ui, current_address_range: &Range<usize>, memory: &mut T) {
-        let response = egui::CollapsingHeader::new("⛃ Data Preview").default_open(false).show(ui, |ui| {
-            egui::Grid::new("data_preview_grid").show(ui, |ui| {
-                let data_preview_options = &mut self.options.data_preview_options;
-                // Format selection
-                egui::ComboBox::from_label("Endianness").selected_text(format!("{:?}", data_preview_options.selected_endianness)).show_ui(ui, |ui| {
-                    for endian in Endianness::iter() {
-                        ui.selectable_value(&mut data_preview_options.selected_endianness, endian, format!("{:?}", endian));
+        let response = egui::CollapsingHeader::new("⛃ Data Preview")
+            .default_open(false)
+            .show(ui, |ui| {
+                egui::Grid::new("data_preview_grid").show(ui, |ui| {
+                    let data_preview_options = &mut self.options.data_preview;
+                    // Format selection
+                    egui::ComboBox::from_label("Endianness")
+                        .selected_text(format!("{:?}", data_preview_options.selected_endianness))
+                        .show_ui(ui, |ui| {
+                            for endian in Endianness::iter() {
+                                ui.selectable_value(
+                                    &mut data_preview_options.selected_endianness,
+                                    endian,
+                                    format!("{:?}", endian),
+                                );
+                            }
+                        })
+                        .response
+                        .on_hover_text("Select the endianness of the data");
+                    egui::ComboBox::from_label("Format")
+                        .selected_text(format!("{:?}", data_preview_options.selected_data_format))
+                        .show_ui(ui, |ui| {
+                            for format in DataFormatType::iter() {
+                                ui.selectable_value(
+                                    &mut data_preview_options.selected_data_format,
+                                    format,
+                                    format!("{:?}", format),
+                                );
+                            }
+                        })
+                        .response
+                        .on_hover_text("Select the number type for data interpretation");
+
+                    ui.end_row();
+
+                    // Read and display the value
+                    let hover_text = "Right click a value in the UI to select it, right click again to unselect";
+
+                    if let Some(address) = self.frame_data.selected_highlight_address {
+                        let value = Self::read_mem_value(
+                            self.read_function,
+                            address,
+                            *data_preview_options,
+                            current_address_range,
+                            memory,
+                        );
+                        ui.label(format!("Value at {:#X} (decimal): ", address))
+                            .on_hover_text(hover_text);
+                        ui.label(value);
+                    } else {
+                        ui.label("Value (decimal): ").on_hover_text(hover_text);
+                        ui.label("None");
                     }
-                }).response.on_hover_text("Select the number type for data interpretation");
-                egui::ComboBox::from_label("Format").selected_text(format!("{:?}", data_preview_options.selected_data_format)).show_ui(ui, |ui| {
-                    for format in DataFormatType::iter() {
-                        ui.selectable_value(&mut data_preview_options.selected_data_format, format, format!("{:?}", format));
-                    }
-                }).response.on_hover_text("Select the number type for data interpretation");
-
-                ui.end_row();
-
-                // Read and display the value
-                let hover_text = "Right click a value in the UI to select it, right click again to unselect";
-
-                if let Some(address) = self.frame_data.selected_highlight_address {
-                    let value = Self::read_mem_value(self.read_function, address, *data_preview_options, current_address_range, memory);
-                    ui.label(format!("Value at {:#X} (decimal): ", address)).on_hover_text(hover_text);
-                    ui.label(value);
-                } else {
-                    ui.label("Value (decimal): ").on_hover_text(hover_text);
-                    ui.label("None");
-                }
+                });
             });
-        });
         // Currently relies on the header being open_default(false), otherwise we'd enable the highlight when closing the preview!
         if response.header_response.clicked() {
             self.frame_data.show_additional_highlights = !self.frame_data.show_additional_highlights;
         }
     }
 
-    fn read_mem_value(read_function: ReadFunction<T>, address: usize, data_preview: DataPreviewOptions, address_space: &Range<usize>, memory: &mut T) -> String {
+    fn read_mem_value(
+        read_function: ReadFunction<T>,
+        address: usize,
+        data_preview: DataPreviewOptions,
+        address_space: &Range<usize>,
+        memory: &mut T,
+    ) -> String {
         let bytes = (0..data_preview.selected_data_format.bytes_to_read())
             .map(|i| {
                 let read_address = address + i;
