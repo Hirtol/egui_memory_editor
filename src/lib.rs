@@ -11,7 +11,6 @@ use egui::{Align, Context, Label, Layout, RichText, ScrollArea, Sense, TextEdit,
 
 use crate::option_data::{BetweenFrameData, MemoryEditorOptions};
 
-mod list_clipper;
 pub mod option_data;
 mod option_ui;
 mod utilities;
@@ -129,42 +128,51 @@ impl<T> MemoryEditor<T> {
         // For when we're editing memory, don't use the `Response` object as that would screw over downward scrolling.
         self.handle_keyboard_edit_input(&address_space, ui.ctx());
 
-        let clipper = list_clipper::ScrollAreaClipper::new(max_lines, line_height)
-            .with_start_line(std::mem::take(&mut self.frame_data.goto_address_line));
+        let mut scroll = ScrollArea::vertical()
+            .id_source(selected_address_range)
+            .max_height(f32::INFINITY)
+            .auto_shrink([false, true]);
 
-        ScrollArea::vertical().max_height(f32::INFINITY).auto_shrink([false, true]).show(ui, |ui| {
-            clipper.show(ui, |ui, line_range| {
-                egui::Grid::new("mem_edit_grid")
-                    .striped(true)
-                    .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
-                    .show(ui, |ui| {
-                        ui.style_mut().wrap = Some(false);
-                        ui.style_mut().spacing.item_spacing.x = 3.0;
+        // Scroll to the goto area address line.
+        if let Some(addr) = std::mem::take(&mut self.frame_data.goto_address_line) {
+            if address_space.contains(&addr) {
+                let new_offset = (line_height + ui.spacing().item_spacing.y) * (addr as f32);
 
-                        for start_row in line_range.clone() {
-                            let start_address = address_space.start + (start_row * column_count);
-                            let line_range = start_address..start_address + column_count;
-                            let highlight_in_range = matches!(self.frame_data.selected_highlight_address, Some(address) if line_range.contains(&address));
+                scroll = scroll.vertical_scroll_offset(new_offset);
+            }
+        }
 
-                            let start_text = RichText::new(format!("0x{:01$X}:", start_address, address_characters))
-                                .color(if highlight_in_range { highlight_text_colour } else { address_text_colour })
-                                .text_style(memory_editor_address_text_style.clone());
+        scroll.show_rows(ui, line_height, max_lines, |ui, line_range| {
+            egui::Grid::new("mem_edit_grid")
+                .striped(true)
+                .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
+                .show(ui, |ui| {
+                    ui.style_mut().wrap = Some(false);
+                    ui.style_mut().spacing.item_spacing.x = 3.0;
 
-                            ui.label(start_text);
+                    for start_row in line_range.clone() {
+                        let start_address = address_space.start + (start_row * column_count);
+                        let line_range = start_address..start_address + column_count;
+                        let highlight_in_range = matches!(self.frame_data.selected_highlight_address, Some(address) if line_range.contains(&address));
 
-                            self.draw_memory_values(ui, memory, start_address, &address_space);
+                        let start_text = RichText::new(format!("0x{:01$X}:", start_address, address_characters))
+                            .color(if highlight_in_range { highlight_text_colour } else { address_text_colour })
+                            .text_style(memory_editor_address_text_style.clone());
 
-                            if show_ascii {
-                                self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
-                            }
+                        ui.label(start_text);
 
-                            ui.end_row();
+                        self.draw_memory_values(ui, memory, start_address, &address_space);
+
+                        if show_ascii {
+                            self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
                         }
-                    });
-                // After we've drawn the area we want to resize to we want to save this size for the next frame.
-                // In case it has became smaller we'll shrink the window.
-                self.frame_data.previous_frame_editor_width = ui.min_rect().width();
-            })
+
+                        ui.end_row();
+                    }
+                });
+            // After we've drawn the area we want to resize to we want to save this size for the next frame.
+            // In case it has became smaller we'll shrink the window.
+            self.frame_data.previous_frame_editor_width = ui.min_rect().width();
         });
     }
 
@@ -315,7 +323,7 @@ impl<T> MemoryEditor<T> {
         let address_size = ui.text_style_height(&self.options.memory_editor_address_text_style);
         let body_size = ui.text_style_height(&self.options.memory_editor_text_style);
         let ascii_size = ui.text_style_height(&self.options.memory_editor_ascii_text_style);
-        address_size.max(body_size).max(ascii_size) + ui.style().spacing.item_spacing.y
+        address_size.max(body_size).max(ascii_size)
     }
 
     /// Shrink the window to the previous frame's memory viewer's width.
