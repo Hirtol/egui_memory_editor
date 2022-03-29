@@ -3,11 +3,16 @@ use std::ops::Range;
 use egui::Ui;
 
 use crate::option_data::{DataFormatType, DataPreviewOptions, Endianness};
-use crate::{MemoryEditor, ReadFunction};
+use crate::{Address, MemoryEditor};
 
-impl<T> MemoryEditor<T> {
+impl MemoryEditor {
     /// Draw the `Options` collapsing header with the main options and data preview hidden underneath.
-    pub(crate) fn draw_options_area(&mut self, ui: &mut Ui, memory: &mut T) {
+    pub(crate) fn draw_options_area<T: ?Sized>(
+        &mut self,
+        ui: &mut Ui,
+        mem: &mut T,
+        read: &mut impl FnMut(&mut T, Address) -> u8,
+    ) {
         let current_address_range = self
             .address_ranges
             .get(&self.options.selected_address_range)
@@ -19,12 +24,12 @@ impl<T> MemoryEditor<T> {
             .show(ui, |ui| {
                 self.draw_main_options(ui, &current_address_range);
 
-                self.draw_data_preview(ui, &current_address_range, memory);
+                self.draw_data_preview(ui, &current_address_range, mem, read);
             });
     }
 
     /// Draw the main options, including the column selection and goto address.
-    fn draw_main_options(&mut self, ui: &mut Ui, current_address_range: &Range<usize>) {
+    fn draw_main_options(&mut self, ui: &mut Ui, current_address_range: &Range<Address>) {
         egui::Grid::new("options_grid").show(ui, |ui| {
             // Memory region selection
             if self.frame_data.memory_range_combo_box_enabled {
@@ -80,7 +85,7 @@ impl<T> MemoryEditor<T> {
                     *goto_address_string = goto_address_string[2..].to_string();
                 }
 
-                let address = usize::from_str_radix(goto_address_string, 16);
+                let address = Address::from_str_radix(goto_address_string, 16);
 
                 self.frame_data.goto_address_line = address
                     .clone()
@@ -108,7 +113,13 @@ impl<T> MemoryEditor<T> {
     }
 
     /// Draws the data preview underneath a collapsing header.
-    fn draw_data_preview(&mut self, ui: &mut Ui, current_address_range: &Range<usize>, memory: &mut T) {
+    fn draw_data_preview<T: ?Sized>(
+        &mut self,
+        ui: &mut Ui,
+        current_address_range: &Range<Address>,
+        mem: &mut T,
+        read: &mut impl FnMut(&mut T, Address) -> u8,
+    ) {
         let response = egui::CollapsingHeader::new("⛃ Data Preview")
             .default_open(false)
             .show(ui, |ui| {
@@ -148,13 +159,8 @@ impl<T> MemoryEditor<T> {
                     let hover_text = "Right click a value in the UI to select it, right click again to unselect";
 
                     if let Some(address) = self.frame_data.selected_highlight_address {
-                        let value = Self::read_mem_value(
-                            self.read_function,
-                            address,
-                            *data_preview_options,
-                            current_address_range,
-                            memory,
-                        );
+                        let value =
+                            Self::read_mem_value(mem, read, address, *data_preview_options, current_address_range);
                         ui.label(format!("Value at {:#X} (decimal): ", address))
                             .on_hover_text(hover_text);
                         ui.label(value);
@@ -170,18 +176,18 @@ impl<T> MemoryEditor<T> {
         }
     }
 
-    fn read_mem_value(
-        read_function: ReadFunction<T>,
-        address: usize,
+    fn read_mem_value<T: ?Sized>(
+        mem: &mut T,
+        read_fn: &mut impl FnMut(&mut T, Address) -> u8,
+        address: Address,
         data_preview: DataPreviewOptions,
-        address_space: &Range<usize>,
-        memory: &mut T,
+        address_space: &Range<Address>,
     ) -> String {
         let bytes = (0..data_preview.selected_data_format.bytes_to_read())
             .map(|i| {
                 let read_address = address + i;
                 if address_space.contains(&read_address) {
-                    read_function(memory, read_address)
+                    read_fn(mem, read_address)
                 } else {
                     0
                 }

@@ -1,3 +1,4 @@
+use crate::Address;
 use egui::{Color32, TextStyle};
 use std::ops::Range;
 
@@ -132,23 +133,23 @@ pub(crate) struct BetweenFrameData {
     /// Used to ensure we can resize the window in height, but not in width.
     pub previous_frame_editor_width: f32,
     /// The address a user clicked on in the UI in the previous frame, used for DataPreview
-    pub selected_edit_address: Option<usize>,
+    pub selected_edit_address: Option<Address>,
     pub selected_edit_address_string: String,
     pub selected_edit_address_request_focus: bool,
 
     pub memory_range_combo_box_enabled: bool,
 
-    pub selected_highlight_address: Option<usize>,
+    pub selected_highlight_address: Option<Address>,
     /// Whether to show additional highlights around items after the current selected item when they'd be part
     /// of the value in the data preview section.
     pub show_additional_highlights: bool,
 
     pub goto_address_string: String,
-    pub goto_address_line: Option<usize>,
+    pub goto_address_line: Option<Address>,
 }
 
 impl BetweenFrameData {
-    pub fn set_highlight_address(&mut self, new_address: usize) {
+    pub fn set_highlight_address(&mut self, new_address: Address) {
         // We want to be able to unselect it.
         self.selected_highlight_address = if matches!(self.selected_highlight_address, Some(current) if current == new_address)
         {
@@ -160,7 +161,7 @@ impl BetweenFrameData {
         };
     }
 
-    pub fn set_selected_edit_address(&mut self, new_address: Option<usize>, address_space: &Range<usize>) {
+    pub fn set_selected_edit_address(&mut self, new_address: Option<Address>, address_space: &Range<Address>) {
         self.selected_edit_address_string.clear();
         if matches!(new_address, Some(address) if address_space.contains(&address)) {
             self.set_highlight_address(new_address.unwrap());
@@ -172,12 +173,12 @@ impl BetweenFrameData {
     }
 
     #[inline]
-    pub fn should_highlight(&self, address: usize) -> bool {
+    pub fn should_highlight(&self, address: Address) -> bool {
         self.selected_highlight_address.map_or(false, |addr| addr == address)
             || self.selected_edit_address.map_or(false, |addr| addr == address)
     }
 
-    pub fn should_subtle_highlight(&self, address: usize, data_format: DataFormatType) -> bool {
+    pub fn should_subtle_highlight(&self, address: Address, data_format: DataFormatType) -> bool {
         self.show_additional_highlights
             && self.selected_highlight_address.map_or(false, |addr| {
                 (addr..addr + data_format.bytes_to_read()).contains(&address)

@@ -12,7 +12,7 @@ pub fn main() {
 }
 
 pub struct App {
-    mem_editor: MemoryEditor<Memory>,
+    mem_editor: MemoryEditor,
     memory: Memory,
     // Not relevant code to this crate, here to show performance at this point in time.
     fh: FrameHistory,
@@ -21,11 +21,9 @@ pub struct App {
 impl Default for App {
     fn default() -> Self {
         // Create a memory editor with a variety of ranges, need at least one, but can be as many as you want.
-        // The write function is optional, if you don't set it the UI will be in read-only mode.
-        let mut mem_editor = MemoryEditor::<Memory>::new(|mem, address| mem.read_value(address))
+        let mut mem_editor = MemoryEditor::new()
             .with_address_range("All", 0..0xFFFF)
             .with_address_range("IO", 0xFF00..0xFF80)
-            .with_write_function(|mem, address, value| mem.write_value(address, value))
             .with_window_title("Hello Editor!");
         // At the moment the UI can handle addresses in the range from 0..2^(24 + log_2(column_count)).
         // This is something that'll hopefully be addressed soon to allow for ranges up to 2^64.
@@ -45,7 +43,13 @@ impl epi::App for App {
         create_frame_history(ctx, frame, &mut self.fh);
 
         // This will automatically check for `mem_editor.options.is_open`, so no need to do that here.
-        self.mem_editor.window_ui(ctx, &mut self.memory);
+        // The write function is optional, if you don't set it the UI will be in read-only mode.
+        self.mem_editor.window_ui(
+            ctx,
+            &mut self.memory,
+            |mem, address| mem.read_value(address),
+            |mem, address, val| mem.write_value(address, val),
+        );
         // If your memory changes between frames you'll need to re-render at whatever framerate you want.
         ctx.request_repaint();
     }

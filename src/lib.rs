@@ -15,69 +15,97 @@ pub mod option_data;
 mod option_ui;
 mod utilities;
 
-/// Reads a value present at the provided address in the object `T`.
-///
-/// # Arguments
-///
-/// - `&mut T`: the object on which the read should be performed.
-/// - `usize`: The address of the read.
-pub type ReadFunction<T> = fn(&mut T, usize) -> u8;
-/// Writes the changes the user made to the `T` object.
-///
-/// # Arguments
-///
-/// - `&mut T`: the object whose state is to be updated.
-/// - `usize`: The address of the intended write.
-/// - `u8`: The value set by the user for the provided address.
-pub type WriteFunction<T> = fn(&mut T, usize, u8);
+/// A memory address that should be read from/written to.
+pub type Address = usize;
 
 /// The main struct for the editor window.
 /// This should persist between frames as it keeps track of quite a bit of state.
 #[derive(Clone)]
-pub struct MemoryEditor<T> {
+pub struct MemoryEditor {
     /// The name of the `egui` window, can be left blank.
     window_name: String,
-    /// The function used for getting the values out of the provided type `T` and displaying them.
-    read_function: ReadFunction<T>,
-    /// The function used when attempts are made to change values within the GUI.
-    write_function: Option<WriteFunction<T>>,
     /// The collection of address ranges, the GUI will start at the lower bound and go up to the upper bound.
     ///
     /// Note this *currently* only supports ranges that have a max of `2^(24+log_2(column_count))` due to `ScrollArea` limitations.
-    address_ranges: BTreeMap<String, Range<usize>>,
+    address_ranges: BTreeMap<String, Range<Address>>,
     /// A collection of options relevant for the `MemoryEditor` window.
     /// Can optionally be serialized/deserialized with `serde`
     pub options: MemoryEditorOptions,
     /// Data for layout between frames, rather hacky.
     frame_data: BetweenFrameData,
+    /// The visible range of addresses from the last frame.
+    visible_range: Range<Address>,
 }
 
-impl<T> MemoryEditor<T> {
+impl MemoryEditor {
     /// Create the MemoryEditor, which should be kept in memory between frames.
     ///
     /// The `read_function` should return one `u8` value from the object which you provide in
     /// either the [`Self::window_ui`] or the [`Self::draw_editor_contents`] method.
     ///
-    /// ```
+    /// ```no_run
     /// # use egui_memory_editor::MemoryEditor;
+    /// # let ctx = egui::Context::default();
     /// let mut memory_base = vec![0xFF; 0xFF];
-    /// let mut memory_editor: MemoryEditor<Vec<u8>> = MemoryEditor::new(|memory, address| memory[address]);
+    /// let mut memory_editor = MemoryEditor::new().with_address_range("Memory", 0..0xFF);
+    ///
+    /// // Show a read-only window
+    /// memory_editor.window_ui_read_only(&ctx, &mut memory_base, |mem, addr| mem[addr]);
     /// ```
-    pub fn new(read_function: ReadFunction<T>) -> Self {
+    pub fn new() -> Self {
         MemoryEditor {
             window_name: "Memory Editor".to_string(),
-            read_function,
-            write_function: None,
             address_ranges: BTreeMap::new(),
             options: Default::default(),
             frame_data: Default::default(),
+            visible_range: Default::default(),
         }
+    }
+
+    /// Returns the visible range of the last frame.
+    ///
+    /// Can be useful for asynchronous memory querying.
+    pub fn visible_range(&self) -> &Range<Address> {
+        &self.visible_range
+    }
+
+    /// Create a read-only window and render the memory editor contents within.
+    ///
+    /// If you want to make your own window/container to be used for the editor contents, you can use [`Self::draw_editor_contents`].
+    /// If you wish to be able to write to the memory, you can use [`Self::window_ui`].
+    pub fn window_ui_read_only<T: ?Sized>(
+        &mut self,
+        ctx: &Context,
+        mem: &mut T,
+        read_fn: impl FnMut(&mut T, Address) -> u8,
+    ) {
+        // This needs to exist due to the fact we want to use generics, and `Option` needs to know the size of its contents.
+        type DummyWriteFunction<T> = fn(&mut T, Address, u8);
+
+        self.window_ui_impl(ctx, mem, read_fn, None::<DummyWriteFunction<T>>);
     }
 
     /// Create a window and render the memory editor contents within.
     ///
     /// If you want to make your own window/container to be used for the editor contents, you can use [`Self::draw_editor_contents`].
-    pub fn window_ui(&mut self, ctx: &Context, memory: &mut T) {
+    /// If you wish for read-only access to the memory, you can use [`Self::window_ui_read_only`].
+    pub fn window_ui<T: ?Sized>(
+        &mut self,
+        ctx: &Context,
+        mem: &mut T,
+        read_fn: impl FnMut(&mut T, Address) -> u8,
+        write_fn: impl FnMut(&mut T, Address, u8),
+    ) {
+        self.window_ui_impl(ctx, mem, read_fn, Some(write_fn));
+    }
+
+    fn window_ui_impl<T: ?Sized>(
+        &mut self,
+        ctx: &Context,
+        mem: &mut T,
+        read_fn: impl FnMut(&mut T, Address) -> u8,
+        write_fn: Option<impl FnMut(&mut T, Address, u8)>,
+    ) {
         let mut is_open = self.options.is_open;
 
         Window::new(self.window_name.clone())
@@ -87,7 +115,7 @@ impl<T> MemoryEditor<T> {
             .resizable(true)
             .show(ctx, |ui| {
                 self.shrink_window_ui(ui);
-                self.draw_editor_contents(ui, memory);
+                self.draw_editor_contents(ui, mem, read_fn, write_fn);
             });
 
         self.options.is_open = is_open;
@@ -98,13 +126,21 @@ impl<T> MemoryEditor<T> {
     /// Can be included in whatever container you want.
     ///
     /// Use [`Self::window_ui`] if you want to have a window with the contents instead.
-    pub fn draw_editor_contents(&mut self, ui: &mut Ui, memory: &mut T) {
+    ///
+    /// If no `write_fn` function is provided, the editor will be read-only.
+    pub fn draw_editor_contents<T: ?Sized>(
+        &mut self,
+        ui: &mut Ui,
+        mem: &mut T,
+        mut read_fn: impl FnMut(&mut T, Address) -> u8,
+        mut write_fn: Option<impl FnMut(&mut T, Address, u8)>,
+    ) {
         assert!(
             !self.address_ranges.is_empty(),
             "At least one address range needs to be added to render the contents!"
         );
 
-        self.draw_options_area(ui, memory);
+        self.draw_options_area(ui, mem, &mut read_fn);
 
         ui.separator();
 
@@ -143,6 +179,9 @@ impl<T> MemoryEditor<T> {
         }
 
         scroll.show_rows(ui, line_height, max_lines, |ui, line_range| {
+            // Persist the visible range for future queries.
+            self.visible_range = line_range.clone();
+
             egui::Grid::new("mem_edit_grid")
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
@@ -161,10 +200,10 @@ impl<T> MemoryEditor<T> {
 
                         ui.label(start_text);
 
-                        self.draw_memory_values(ui, memory, start_address, &address_space);
+                        self.draw_memory_values(ui, mem, &mut read_fn, &mut write_fn, start_address, &address_space);
 
                         if show_ascii {
-                            self.draw_ascii_sidebar(ui, memory, start_address, &address_space);
+                            self.draw_ascii_sidebar(ui, mem, &mut read_fn, start_address, &address_space);
                         }
 
                         ui.end_row();
@@ -176,12 +215,18 @@ impl<T> MemoryEditor<T> {
         });
     }
 
-    fn draw_memory_values(&mut self, ui: &mut Ui, memory: &mut T, start_address: usize, address_space: &Range<usize>) {
+    fn draw_memory_values<T: ?Sized>(
+        &mut self,
+        ui: &mut Ui,
+        mem: &mut T,
+        read_fn: &mut impl FnMut(&mut T, Address) -> u8,
+        write_fn: &mut Option<impl FnMut(&mut T, Address, u8)>,
+        start_address: Address,
+        address_space: &Range<Address>,
+    ) {
         let frame_data = &mut self.frame_data;
         let options = &self.options;
-        let read_function = self.read_function;
-        let write_function = &self.write_function;
-        let mut read_only = frame_data.selected_edit_address.is_none() || write_function.is_none();
+        let mut read_only = frame_data.selected_edit_address.is_none() || write_fn.is_none();
 
         for grid_column in 0..(options.column_count + 7) / 8 {
             // div_ceil
@@ -197,7 +242,7 @@ impl<T> MemoryEditor<T> {
                         break;
                     }
 
-                    let mem_val: u8 = read_function(memory, memory_address);
+                    let mem_val: u8 = read_fn(mem, memory_address);
 
                     let label_text = format!("{:02X}", mem_val);
 
@@ -230,7 +275,9 @@ impl<T> MemoryEditor<T> {
                             let new_value = u8::from_str_radix(&frame_data.selected_edit_address_string[0..2], 16);
 
                             if let Ok(value) = new_value {
-                                write_function.unwrap()(memory, memory_address, value);
+                                if let Some(write_fns) = write_fn.as_mut() {
+                                    write_fns(mem, memory_address, value);
+                                }
                             }
 
                             frame_data.set_selected_edit_address(Some(next_address), address_space);
@@ -270,7 +317,7 @@ impl<T> MemoryEditor<T> {
                         }
                         // Left click depends on read only mode.
                         if response.inner.clicked() {
-                            if write_function.is_some() {
+                            if write_fn.is_some() {
                                 frame_data.set_selected_edit_address(Some(memory_address), address_space);
                             } else {
                                 frame_data.set_highlight_address(memory_address);
@@ -282,7 +329,14 @@ impl<T> MemoryEditor<T> {
         }
     }
 
-    fn draw_ascii_sidebar(&mut self, ui: &mut Ui, memory: &mut T, start_address: usize, address_space: &Range<usize>) {
+    fn draw_ascii_sidebar<T: ?Sized>(
+        &mut self,
+        ui: &mut Ui,
+        mem: &mut T,
+        read_fn: &mut impl FnMut(&mut T, Address) -> u8,
+        start_address: Address,
+        address_space: &Range<Address>,
+    ) {
         let options = &self.options;
         // Not pretty atm, needs a better method: TODO
         ui.horizontal(|ui| {
@@ -296,7 +350,7 @@ impl<T> MemoryEditor<T> {
                         break;
                     }
 
-                    let mem_val: u8 = (self.read_function)(memory, memory_address);
+                    let mem_val: u8 = read_fn(mem, memory_address);
                     let character = if !(32..128).contains(&mem_val) {
                         '.'
                     } else {
@@ -333,7 +387,7 @@ impl<T> MemoryEditor<T> {
     }
 
     /// Check for arrow keys when we're editing a memory value at an address.
-    fn handle_keyboard_edit_input(&mut self, address_range: &Range<usize>, ctx: &Context) {
+    fn handle_keyboard_edit_input(&mut self, address_range: &Range<Address>, ctx: &Context) {
         use egui::Key::*;
         if self.frame_data.selected_edit_address.is_none() {
             return;
@@ -372,14 +426,6 @@ impl<T> MemoryEditor<T> {
         self
     }
 
-    /// Set the function used to write to the provided object `T`.
-    ///
-    /// This will give the UI write capabilities, and will therefore no longer be `read_only`.
-    pub fn with_write_function(mut self, write_function: WriteFunction<T>) -> Self {
-        self.write_function = Some(write_function);
-        self
-    }
-
     /// Add an address range to the range list.
     /// Multiple address ranges can be added, and will be displayed in the UI by a drop-down box if more than one
     /// range was added.
@@ -388,7 +434,7 @@ impl<T> MemoryEditor<T> {
     ///
     /// The UI will query your set `read_function` with the values within this `Range`
     #[must_use]
-    pub fn with_address_range(mut self, range_name: impl Into<String>, address_range: Range<usize>) -> Self {
+    pub fn with_address_range(mut self, range_name: impl Into<String>, address_range: Range<Address>) -> Self {
         self.address_ranges.insert(range_name.into(), address_range);
         self.frame_data.memory_range_combo_box_enabled = self.address_ranges.len() > 1;
         if let Some((name, _)) = self.address_ranges.iter().next() {
@@ -401,5 +447,11 @@ impl<T> MemoryEditor<T> {
     pub fn with_options(mut self, options: MemoryEditorOptions) -> Self {
         self.options = options;
         self
+    }
+}
+
+impl Default for MemoryEditor {
+    fn default() -> Self {
+        MemoryEditor::new()
     }
 }
