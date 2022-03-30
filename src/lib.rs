@@ -205,6 +205,10 @@ impl MemoryEditor {
                     ui.style_mut().wrap = Some(false);
                     ui.style_mut().spacing.item_spacing.x = 3.0;
 
+                    // For some reason, when using the `Goto Address` text input, after a character is typed the scroll
+                    // offset of this scroll area is decremented for no reason! This is a temporary workaround for that.
+                    scroll_input_workaround(ui);
+
                     for start_row in line_range.clone() {
                         let start_address = address_space.start + (start_row * column_count);
                         let line_range = start_address..start_address + column_count;
@@ -474,5 +478,15 @@ impl MemoryEditor {
 impl Default for MemoryEditor {
     fn default() -> Self {
         MemoryEditor::new()
+    }
+}
+
+/// For some reason, when using the `Goto Address` text input, after a character is typed the scroll
+/// offset of the scroll area in the same window is decremented for no reason!
+///
+/// This is a temporary workaround for that, whilst still allowing smooth scrolling.
+fn scroll_input_workaround(ui: &mut Ui) {
+    if !ui.input().keys_down.is_empty() {
+        ui.scroll_to_cursor(None);
     }
 }

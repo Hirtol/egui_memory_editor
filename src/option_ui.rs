@@ -36,13 +36,17 @@ impl MemoryEditor {
                 let selected_address_range = &mut self.options.selected_address_range;
                 let address_ranges = &self.address_ranges;
 
-                egui::ComboBox::from_label("Region")
-                    .selected_text(selected_address_range.clone())
-                    .show_ui(ui, |ui| {
-                        address_ranges.iter().for_each(|(range_name, _)| {
-                            ui.selectable_value(selected_address_range, range_name.clone(), range_name);
+                ui.horizontal(|ui| {
+                    ui.label("Region:");
+
+                    egui::ComboBox::from_id_source("RegionCombo")
+                        .selected_text(selected_address_range.clone())
+                        .show_ui(ui, |ui| {
+                            address_ranges.iter().for_each(|(range_name, _)| {
+                                ui.selectable_value(selected_address_range, range_name.clone(), range_name);
+                            });
                         });
-                    });
+                });
             };
 
             // Column dragger
@@ -97,6 +101,8 @@ impl MemoryEditor {
                         let offset_addr = addr.saturating_add(current_address_range.start);
 
                         if current_address_range.contains(&offset_addr) {
+                            // We're doing an offset jump, we should update the string to reflect the absolute address
+                            *goto_address_string = format!("{:X}", offset_addr);
                             Some(offset_addr)
                         } else {
                             None
@@ -122,6 +128,7 @@ impl MemoryEditor {
                 "{} the ASCII representation view",
                 if *show_ascii_sidebar { "Disable" } else { "Enable" }
             ));
+
             ui.checkbox(show_zero_colour, "Custom zero colour")
                 .on_hover_text("If enabled memory values of '0x00' will be coloured differently");
         });
@@ -154,6 +161,7 @@ impl MemoryEditor {
                         })
                         .response
                         .on_hover_text("Select the endianness of the data");
+
                     egui::ComboBox::from_label("Format")
                         .selected_text(format!("{:?}", data_preview_options.selected_data_format))
                         .show_ui(ui, |ui| {
