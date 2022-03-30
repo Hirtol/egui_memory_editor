@@ -170,12 +170,9 @@ impl MemoryEditor {
             .auto_shrink([false, true]);
 
         // Scroll to the goto area address line.
-        if let Some(addr) = std::mem::take(&mut self.frame_data.goto_address_line) {
-            if address_space.contains(&addr) {
-                let new_offset = (line_height + ui.spacing().item_spacing.y) * (addr as f32);
-
-                scroll = scroll.vertical_scroll_offset(new_offset);
-            }
+        if let Some(line) = std::mem::take(&mut self.frame_data.goto_address_line) {
+            let new_offset = (line_height + ui.spacing().item_spacing.y) * (line as f32);
+            scroll = scroll.vertical_scroll_offset(new_offset);
         }
 
         scroll.show_rows(ui, line_height, max_lines, |ui, line_range| {

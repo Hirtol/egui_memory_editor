@@ -145,7 +145,7 @@ pub(crate) struct BetweenFrameData {
     pub show_additional_highlights: bool,
 
     pub goto_address_string: String,
-    pub goto_address_line: Option<Address>,
+    pub goto_address_line: Option<usize>,
 }
 
 impl BetweenFrameData {
