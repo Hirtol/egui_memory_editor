@@ -50,7 +50,7 @@ impl MemoryEditor {
     /// let mut memory_editor = MemoryEditor::new().with_address_range("Memory", 0..0xFF);
     ///
     /// // Show a read-only window
-    /// memory_editor.window_ui_read_only(&ctx, &mut memory_base, |mem, addr| mem[addr]);
+    /// memory_editor.window_ui_read_only(&ctx, &mut memory_base, |mem, addr| mem[addr].into());
     /// ```
     pub fn new() -> Self {
         MemoryEditor {
@@ -73,11 +73,19 @@ impl MemoryEditor {
     ///
     /// If you want to make your own window/container to be used for the editor contents, you can use [`Self::draw_editor_contents`].
     /// If you wish to be able to write to the memory, you can use [`Self::window_ui`].
+    ///
+    /// # Arguments
+    ///
+    /// * `ctx` - The `egui` context.
+    /// * `mem` - The memory from which to read.
+    /// * `read_fn` - Any closure which takes in a reference to the memory and an address and returns a `u8` value. It can
+    /// return `None` if the data at the specified address is not available for whatever reason. This will then be rendered
+    /// as `--`
     pub fn window_ui_read_only<T: ?Sized>(
         &mut self,
         ctx: &Context,
         mem: &mut T,
-        read_fn: impl FnMut(&mut T, Address) -> u8,
+        read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
     ) {
         // This needs to exist due to the fact we want to use generics, and `Option` needs to know the size of its contents.
         type DummyWriteFunction<T> = fn(&mut T, Address, u8);
@@ -89,11 +97,20 @@ impl MemoryEditor {
     ///
     /// If you want to make your own window/container to be used for the editor contents, you can use [`Self::draw_editor_contents`].
     /// If you wish for read-only access to the memory, you can use [`Self::window_ui_read_only`].
+    ///
+    /// # Arguments
+    ///
+    /// * `ctx` - The `egui` context.
+    /// * `mem` - The memory from which to read.
+    /// * `read_fn` - Any closure which takes in a reference to the memory and an address and returns a `u8` value. It can
+    /// return `None` if the data at the specified address is not available for whatever reason. This will then be rendered
+    /// as `--`
+    /// * `write_fn` - Any closure which can take a reference to the memory, an address, and the value to write.
     pub fn window_ui<T: ?Sized>(
         &mut self,
         ctx: &Context,
         mem: &mut T,
-        read_fn: impl FnMut(&mut T, Address) -> u8,
+        read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
         write_fn: impl FnMut(&mut T, Address, u8),
     ) {
         self.window_ui_impl(ctx, mem, read_fn, Some(write_fn));
@@ -103,7 +120,7 @@ impl MemoryEditor {
         &mut self,
         ctx: &Context,
         mem: &mut T,
-        read_fn: impl FnMut(&mut T, Address) -> u8,
+        read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
         write_fn: Option<impl FnMut(&mut T, Address, u8)>,
     ) {
         let mut is_open = self.options.is_open;
@@ -132,7 +149,7 @@ impl MemoryEditor {
         &mut self,
         ui: &mut Ui,
         mem: &mut T,
-        mut read_fn: impl FnMut(&mut T, Address) -> u8,
+        mut read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
         mut write_fn: Option<impl FnMut(&mut T, Address, u8)>,
     ) {
         assert!(
@@ -195,6 +212,7 @@ impl MemoryEditor {
 
                         let start_text = RichText::new(format!("0x{:01$X}:", start_address, address_characters))
                             .color(if highlight_in_range { highlight_text_colour } else { address_text_colour })
+                            .size(20.)
                             .text_style(memory_editor_address_text_style.clone());
 
                         ui.label(start_text);
@@ -218,7 +236,7 @@ impl MemoryEditor {
         &mut self,
         ui: &mut Ui,
         mem: &mut T,
-        read_fn: &mut impl FnMut(&mut T, Address) -> u8,
+        read_fn: &mut impl FnMut(&mut T, Address) -> Option<u8>,
         write_fn: &mut Option<impl FnMut(&mut T, Address, u8)>,
         start_address: Address,
         address_space: &Range<Address>,
@@ -241,9 +259,12 @@ impl MemoryEditor {
                         break;
                     }
 
-                    let mem_val: u8 = read_fn(mem, memory_address);
-
-                    let label_text = format!("{:02X}", mem_val);
+                    let mem_val: Option<u8> = read_fn(mem, memory_address);
+                    // If the read function can't read for whatever reason we'll just assume some temporary `--` value.
+                    let label_text = match mem_val {
+                        Some(val) => format!("{:02X}", val),
+                        None => options.none_display_value.clone(),
+                    };
 
                     // Memory Value Labels
                     if !read_only
@@ -290,7 +311,7 @@ impl MemoryEditor {
                         // Read-only values.
                         let mut text = RichText::new(label_text).text_style(options.memory_editor_text_style.clone());
 
-                        if options.show_zero_colour && mem_val == 0 {
+                        if options.show_zero_colour && (matches!(mem_val, Some(val) if val == 0) || mem_val.is_none()) {
                             text = text.color(options.zero_colour);
                         } else {
                             text = text.color(column.style().visuals.text_color());
@@ -332,7 +353,7 @@ impl MemoryEditor {
         &mut self,
         ui: &mut Ui,
         mem: &mut T,
-        read_fn: &mut impl FnMut(&mut T, Address) -> u8,
+        read_fn: &mut impl FnMut(&mut T, Address) -> Option<u8>,
         start_address: Address,
         address_space: &Range<Address>,
     ) {
@@ -349,7 +370,7 @@ impl MemoryEditor {
                         break;
                     }
 
-                    let mem_val: u8 = read_fn(mem, memory_address);
+                    let mem_val: u8 = read_fn(mem, memory_address).unwrap_or(0);
                     let character = if !(32..128).contains(&mem_val) {
                         '.'
                     } else {

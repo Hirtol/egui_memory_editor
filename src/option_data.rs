@@ -74,6 +74,8 @@ pub struct MemoryEditorOptions {
     pub show_ascii: bool,
     /// Whether `0x00` values in the main UI should use the [`MemoryEditorOptions::zero_colour`].
     pub show_zero_colour: bool,
+    /// The value to display if the `read_fn` ever returns [Option::None].
+    pub none_display_value: String,
     /// Whether the options header is collapsed by default or not.
     /// Default is `false`.
     pub is_options_collapsed: bool,
@@ -113,6 +115,7 @@ impl Default for MemoryEditorOptions {
             data_preview: Default::default(),
             show_ascii: true,
             show_zero_colour: true,
+            none_display_value: "--".to_string(),
             is_options_collapsed: false,
             zero_colour: Color32::from_gray(80),
             is_resizable_column: true,

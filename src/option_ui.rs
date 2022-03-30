@@ -11,7 +11,7 @@ impl MemoryEditor {
         &mut self,
         ui: &mut Ui,
         mem: &mut T,
-        read: &mut impl FnMut(&mut T, Address) -> u8,
+        read: &mut impl FnMut(&mut T, Address) -> Option<u8>,
     ) {
         let current_address_range = self
             .address_ranges
@@ -118,7 +118,7 @@ impl MemoryEditor {
         ui: &mut Ui,
         current_address_range: &Range<Address>,
         mem: &mut T,
-        read: &mut impl FnMut(&mut T, Address) -> u8,
+        read: &mut impl FnMut(&mut T, Address) -> Option<u8>,
     ) {
         let response = egui::CollapsingHeader::new("⛃ Data Preview")
             .default_open(false)
@@ -178,7 +178,7 @@ impl MemoryEditor {
 
     fn read_mem_value<T: ?Sized>(
         mem: &mut T,
-        read_fn: &mut impl FnMut(&mut T, Address) -> u8,
+        read_fn: &mut impl FnMut(&mut T, Address) -> Option<u8>,
         address: Address,
         data_preview: DataPreviewOptions,
         address_space: &Range<Address>,
@@ -187,7 +187,7 @@ impl MemoryEditor {
             .map(|i| {
                 let read_address = address + i;
                 if address_space.contains(&read_address) {
-                    read_fn(mem, read_address)
+                    read_fn(mem, read_address).unwrap_or(0)
                 } else {
                     0
                 }

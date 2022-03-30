@@ -47,7 +47,7 @@ impl epi::App for App {
         self.mem_editor.window_ui(
             ctx,
             &mut self.memory,
-            |mem, address| mem.read_value(address),
+            |mem, address| mem.read_value(address).into(),
             |mem, address, val| mem.write_value(address, val),
         );
         // If your memory changes between frames you'll need to re-render at whatever framerate you want.
