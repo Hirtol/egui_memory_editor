@@ -177,7 +177,9 @@ impl MemoryEditor {
 
         scroll.show_rows(ui, line_height, max_lines, |ui, line_range| {
             // Persist the visible range for future queries.
-            self.visible_range = line_range.clone();
+            let start_address_range = address_space.start + (line_range.start * column_count);
+            let end_address_range = address_space.start + (line_range.end * column_count);
+            self.visible_range = start_address_range..end_address_range;
 
             egui::Grid::new("mem_edit_grid")
                 .striped(true)
