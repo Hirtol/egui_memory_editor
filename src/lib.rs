@@ -212,7 +212,6 @@ impl MemoryEditor {
 
                         let start_text = RichText::new(format!("0x{:01$X}:", start_address, address_characters))
                             .color(if highlight_in_range { highlight_text_colour } else { address_text_colour })
-                            .size(20.)
                             .text_style(memory_editor_address_text_style.clone());
 
                         ui.label(start_text);
@@ -245,15 +244,16 @@ impl MemoryEditor {
         let options = &self.options;
         let mut read_only = frame_data.selected_edit_address.is_none() || write_fn.is_none();
 
+        // div_ceil
         for grid_column in 0..(options.column_count + 7) / 8 {
-            // div_ceil
             let start_address = start_address + 8 * grid_column;
-            // We use columns here instead of horizontal_for_text() to keep consistent spacing for non-monospace fonts.
-            // When fonts are more customizable (e.g, we can accept a `Font` as a setting instead of `TextStyle`) I'd like
-            // to switch to horizontal_for_text() as we can then just assume a decent Monospace font provided by the user.
-            ui.columns((options.column_count - 8 * grid_column).min(8), |columns| {
-                for (i, column) in columns.iter_mut().enumerate() {
-                    let memory_address = start_address + i;
+
+            // Each grid column is 8 bytes, where each byte is one 'sub-column'.
+            ui.horizontal(|ui| {
+                let column_count = (options.column_count - 8 * grid_column).min(8);
+
+                for column_index in 0..column_count {
+                    let memory_address = start_address + column_index;
 
                     if !address_space.contains(&memory_address) {
                         break;
@@ -271,17 +271,17 @@ impl MemoryEditor {
                         && matches!(frame_data.selected_edit_address, Some(address) if address == memory_address)
                     {
                         // For Editing
-                        let response = column.with_layout(Layout::right_to_left(), |ui| {
-                            ui.add(
-                                TextEdit::singleline(&mut frame_data.selected_edit_address_string)
-                                    .desired_width(6.0)
-                                    .font(options.memory_editor_text_style.clone())
-                                    .hint_text(label_text),
-                            )
-                        });
+                        let response = ui.add(
+                            TextEdit::singleline(&mut frame_data.selected_edit_address_string)
+                                .desired_width(6.0)
+                                .font(options.memory_editor_text_style.clone())
+                                .hint_text(label_text)
+                                .id_source(frame_data.selected_edit_address),
+                        );
+
                         if frame_data.selected_edit_address_request_focus {
                             frame_data.selected_edit_address_request_focus = false;
-                            column.memory().request_focus(response.inner.id);
+                            response.request_focus();
                         }
 
                         // Filter out any non Hex-Digit, there doesn't seem to be a method in TextEdit for this.
@@ -301,7 +301,7 @@ impl MemoryEditor {
                             }
 
                             frame_data.set_selected_edit_address(Some(next_address), address_space);
-                        } else if !column.ctx().memory().has_focus(response.inner.id) {
+                        } else if !response.has_focus() {
                             // We use has_focus() instead of response.inner.lost_focus() due to the latter
                             // having a bug where it doesn't detect it lost focus when you scroll.
                             frame_data.set_selected_edit_address(None, address_space);
@@ -314,7 +314,7 @@ impl MemoryEditor {
                         if options.show_zero_colour && (matches!(mem_val, Some(val) if val == 0) || mem_val.is_none()) {
                             text = text.color(options.zero_colour);
                         } else {
-                            text = text.color(column.style().visuals.text_color());
+                            text = text.color(ui.style().visuals.text_color());
                         };
 
                         if frame_data.should_highlight(memory_address) {
@@ -323,20 +323,22 @@ impl MemoryEditor {
 
                         if frame_data.should_subtle_highlight(memory_address, options.data_preview.selected_data_format)
                         {
-                            text = text.background_color(column.style().visuals.code_bg_color);
+                            text = text.background_color(ui.style().visuals.code_bg_color);
                         }
 
                         let label = Label::new(text).sense(Sense::click());
 
                         // This particular layout is necessary to stop the memory values gradually shifting over to the right
                         // Presumably due to some floating point error when using left_to_right()
-                        let response = column.with_layout(Layout::right_to_left(), |ui| ui.add(label));
+                        let response = ui.add(label);
+
                         // Right click always selects.
-                        if response.inner.secondary_clicked() {
+                        if response.secondary_clicked() {
                             frame_data.set_highlight_address(memory_address);
                         }
+
                         // Left click depends on read only mode.
-                        if response.inner.clicked() {
+                        if response.clicked() {
                             if write_fn.is_some() {
                                 frame_data.set_selected_edit_address(Some(memory_address), address_space);
                             } else {
@@ -362,8 +364,9 @@ impl MemoryEditor {
         ui.horizontal(|ui| {
             ui.add(egui::Separator::default().vertical().spacing(3.0));
             ui.style_mut().spacing.item_spacing.x = 0.0;
-            ui.columns(options.column_count, |columns| {
-                for (i, column) in columns.iter_mut().enumerate() {
+
+            ui.horizontal(|ui| {
+                for i in 0..options.column_count {
                     let memory_address = start_address + i;
 
                     if !address_space.contains(&memory_address) {
@@ -381,12 +384,10 @@ impl MemoryEditor {
                     if self.frame_data.should_highlight(memory_address) {
                         text = text
                             .color(self.options.highlight_text_colour)
-                            .background_color(column.style().visuals.code_bg_color);
+                            .background_color(ui.style().visuals.code_bg_color);
                     }
 
-                    column.with_layout(Layout::bottom_up(Align::Center), |ui| {
-                        ui.label(text);
-                    });
+                    ui.label(text);
                 }
             });
         });
