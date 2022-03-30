@@ -65,7 +65,10 @@ impl MemoryEditor {
             let response = ui
                 .add(egui::TextEdit::singleline(&mut self.frame_data.goto_address_string).hint_text("0000"))
                 .on_hover_text(
-                    "Goto an address, an address like 0xAA is written as AA\nPress enter to move to the address",
+                    "Goto an address, format: \n\
+                    * An address like `0xAA` can be written as `AA`\n\
+                    * Offset from the base address, if the base is `0xFF00` then one can enter `5` to go to `0xFF05`\n\
+                    Press enter to move to the address",
                 );
             ui.label(format!("Goto: {:#X?}", current_address_range));
 
@@ -85,14 +88,26 @@ impl MemoryEditor {
                     *goto_address_string = goto_address_string[2..].to_string();
                 }
 
-                let address = Address::from_str_radix(goto_address_string, 16);
+                let address = Address::from_str_radix(goto_address_string, 16).ok().and_then(|addr| {
+                    if current_address_range.contains(&addr) {
+                        Some(addr)
+                    } else {
+                        // For brevity the user should be able to elide the base address, e.g when using the range
+                        // 0xFF00..0xFFFF the user can write 0x5 to go to 0xFF05
+                        let offset_addr = addr.saturating_add(current_address_range.start);
+
+                        if current_address_range.contains(&offset_addr) {
+                            Some(offset_addr)
+                        } else {
+                            None
+                        }
+                    }
+                });
 
                 self.frame_data.goto_address_line = address
-                    .clone()
-                    .ok()
                     .and_then(|addr| addr.checked_sub(current_address_range.start))
                     .map(|addr| addr / self.options.column_count);
-                self.frame_data.selected_highlight_address = address.ok();
+                self.frame_data.selected_highlight_address = address;
 
                 response.surrender_focus();
             }
