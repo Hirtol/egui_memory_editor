@@ -47,10 +47,11 @@ impl MemoryEditor {
     /// # use egui_memory_editor::MemoryEditor;
     /// # let ctx = egui::Context::default();
     /// let mut memory_base = vec![0xFF; 0xFF];
+    /// let mut is_open = true;
     /// let mut memory_editor = MemoryEditor::new().with_address_range("Memory", 0..0xFF);
     ///
     /// // Show a read-only window
-    /// memory_editor.window_ui_read_only(&ctx, &mut memory_base, |mem, addr| mem[addr].into());
+    /// memory_editor.window_ui_read_only(&ctx, &mut is_open, &mut memory_base, |mem, addr| mem[addr].into());
     /// ```
     pub fn new() -> Self {
         MemoryEditor {
