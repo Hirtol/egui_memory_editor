@@ -68,8 +68,6 @@ impl Default for DataPreviewOptions {
 #[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
 #[cfg_attr(feature = "persistence", serde(default))]
 pub struct MemoryEditorOptions {
-    /// Used to check if the window is open, if you don't use the [`crate::MemoryEditor::window_ui`] call then this is irrelevant.
-    pub is_open: bool,
     /// Whether to show the ASCII representation of all the `u8` values in the main UI.
     pub show_ascii: bool,
     /// Whether `0x00` values in the main UI should use the [`MemoryEditorOptions::zero_colour`].
@@ -111,7 +109,6 @@ pub struct MemoryEditorOptions {
 impl Default for MemoryEditorOptions {
     fn default() -> Self {
         MemoryEditorOptions {
-            is_open: true,
             data_preview: Default::default(),
             show_ascii: true,
             show_zero_colour: true,

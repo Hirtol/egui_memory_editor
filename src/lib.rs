@@ -84,13 +84,14 @@ impl MemoryEditor {
     pub fn window_ui_read_only<T: ?Sized>(
         &mut self,
         ctx: &Context,
+        is_open: &mut bool,
         mem: &mut T,
         read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
     ) {
         // This needs to exist due to the fact we want to use generics, and `Option` needs to know the size of its contents.
         type DummyWriteFunction<T> = fn(&mut T, Address, u8);
 
-        self.window_ui_impl(ctx, mem, read_fn, None::<DummyWriteFunction<T>>);
+        self.window_ui_impl(ctx, is_open, mem, read_fn, None::<DummyWriteFunction<T>>);
     }
 
     /// Create a window and render the memory editor contents within.
@@ -109,24 +110,24 @@ impl MemoryEditor {
     pub fn window_ui<T: ?Sized>(
         &mut self,
         ctx: &Context,
+        is_open: &mut bool,
         mem: &mut T,
         read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
         write_fn: impl FnMut(&mut T, Address, u8),
     ) {
-        self.window_ui_impl(ctx, mem, read_fn, Some(write_fn));
+        self.window_ui_impl(ctx, is_open, mem, read_fn, Some(write_fn));
     }
 
     fn window_ui_impl<T: ?Sized>(
         &mut self,
         ctx: &Context,
+        is_open: &mut bool,
         mem: &mut T,
         read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
         write_fn: Option<impl FnMut(&mut T, Address, u8)>,
     ) {
-        let mut is_open = self.options.is_open;
-
         Window::new(self.window_name.clone())
-            .open(&mut is_open)
+            .open(is_open)
             .hscroll(false)
             .vscroll(false)
             .resizable(true)
@@ -134,8 +135,6 @@ impl MemoryEditor {
                 self.shrink_window_ui(ui);
                 self.draw_editor_contents(ui, mem, read_fn, write_fn);
             });
-
-        self.options.is_open = is_open;
     }
 
     /// Draws the actual memory viewer/editor.

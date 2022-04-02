@@ -16,6 +16,7 @@ pub struct App {
     memory: Memory,
     // Not relevant code to this crate, here to show performance at this point in time.
     fh: FrameHistory,
+    is_open: bool,
 }
 
 impl Default for App {
@@ -34,6 +35,7 @@ impl Default for App {
             mem_editor,
             memory: Default::default(),
             fh: Default::default(),
+            is_open: true,
         }
     }
 }
@@ -46,6 +48,7 @@ impl epi::App for App {
         // The write function is optional, if you don't set it the UI will be in read-only mode.
         self.mem_editor.window_ui(
             ctx,
+            &mut self.is_open,
             &mut self.memory,
             |mem, address| mem.read_value(address).into(),
             |mem, address, val| mem.write_value(address, val),
