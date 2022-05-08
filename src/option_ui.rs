@@ -193,6 +193,7 @@ impl MemoryEditor {
                     }
                 });
             });
+
         // Currently relies on the header being open_default(false), otherwise we'd enable the highlight when closing the preview!
         if response.header_response.clicked() {
             self.frame_data.show_additional_highlights = !self.frame_data.show_additional_highlights;

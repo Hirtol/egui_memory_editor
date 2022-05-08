@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Align, Context, Label, Layout, RichText, ScrollArea, Sense, TextEdit, Ui, Vec2, Window};
+use egui::{Context, Label, RichText, ScrollArea, Sense, TextEdit, Ui, Vec2, Window};
 
 use crate::option_data::{BetweenFrameData, MemoryEditorOptions};
 

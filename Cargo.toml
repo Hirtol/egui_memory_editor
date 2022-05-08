@@ -14,7 +14,7 @@ exclude = ["assets/*", ".github/*"]
 
 [features]
 default = []
-persistence = ["serde", "egui/persistence"]
+serde = ["dep:serde", "egui/persistence"]
 
 [dependencies]
 egui = "0.17"

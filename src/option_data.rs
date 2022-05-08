@@ -3,7 +3,7 @@ use egui::{Color32, TextStyle};
 use std::ops::Range;
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum Endianness {
     Big,
     Little,
@@ -16,7 +16,7 @@ impl Endianness {
 }
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
-#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum DataFormatType {
     U8,
     U16,
@@ -48,8 +48,8 @@ impl DataFormatType {
 }
 
 #[derive(Copy, Clone, Debug)]
-#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "persistence", serde(default))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct DataPreviewOptions {
     pub selected_endianness: Endianness,
     pub selected_data_format: DataFormatType,
@@ -65,8 +65,8 @@ impl Default for DataPreviewOptions {
 }
 
 #[derive(Clone, Debug)]
-#[cfg_attr(feature = "persistence", derive(serde::Serialize, serde::Deserialize))]
-#[cfg_attr(feature = "persistence", serde(default))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(default))]
 pub struct MemoryEditorOptions {
     /// Whether to show the ASCII representation of all the `u8` values in the main UI.
     pub show_ascii: bool,
