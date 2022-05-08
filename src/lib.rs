@@ -134,7 +134,7 @@ impl MemoryEditor {
             .resizable(true)
             .show(ctx, |ui| {
                 self.shrink_window_ui(ui);
-                self.draw_editor_contents(ui, mem, read_fn, write_fn);
+                self.draw_editor_contents_impl(ui, mem, read_fn, write_fn);
             });
     }
 
@@ -144,8 +144,37 @@ impl MemoryEditor {
     ///
     /// Use [`Self::window_ui`] if you want to have a window with the contents instead.
     ///
-    /// If no `write_fn` function is provided, the editor will be read-only.
+    /// This is the read-only variant. See [`Self::draw_editor_contents`] for the read-write variant.
+    pub fn draw_editor_contents_read_only<T: ?Sized>(
+        &mut self,
+        ui: &mut Ui,
+        mem: &mut T,
+        read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
+    ) {
+        // This needs to exist due to the fact we want to use generics, and `Option` needs to know the size of its contents.
+        type DummyWriteFunction<T> = fn(&mut T, Address, u8);
+
+        self.draw_editor_contents_impl(ui, mem, read_fn, None::<DummyWriteFunction<T>>);
+    }
+
+    /// Draws the actual memory viewer/editor.
+    ///
+    /// Can be included in whatever container you want.
+    ///
+    /// Use [`Self::window_ui`] if you want to have a window with the contents instead.
+    ///
+    /// If the read-only variant is preferred see [`Self::draw_editor_contents_read_only`].
     pub fn draw_editor_contents<T: ?Sized>(
+        &mut self,
+        ui: &mut Ui,
+        mem: &mut T,
+        read_fn: impl FnMut(&mut T, Address) -> Option<u8>,
+        write_fn: impl FnMut(&mut T, Address, u8),
+    ) {
+        self.draw_editor_contents_impl(ui, mem, read_fn, Some(write_fn));
+    }
+
+    fn draw_editor_contents_impl<T: ?Sized>(
         &mut self,
         ui: &mut Ui,
         mem: &mut T,
