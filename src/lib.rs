@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Context, Label, RichText, ScrollArea, Sense, TextEdit, Ui, Vec2, Window};
+use egui::{Context, Label, RichText, ScrollArea, Sense, TextEdit, Ui, Vec2, Widget, Window};
 
 use crate::option_data::{BetweenFrameData, MemoryEditorOptions};
 
@@ -175,7 +175,6 @@ impl MemoryEditor {
         let address_space = self.address_ranges.get(&selected_address_range).unwrap().clone();
         // This is janky, but can't think of a better way.
         let address_characters = format!("{:X}", address_space.end).chars().count();
-        // Memory Editor Part.
         let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
         // For when we're editing memory, don't use the `Response` object as that would screw over downward scrolling.
@@ -187,7 +186,7 @@ impl MemoryEditor {
             .auto_shrink([false, true]);
 
         // Scroll to the goto area address line.
-        if let Some(line) = std::mem::take(&mut self.frame_data.goto_address_line) {
+        if let Some(line) = self.frame_data.goto_address_line.take() {
             let new_offset = (line_height + ui.spacing().item_spacing.y) * (line as f32);
             scroll = scroll.vertical_scroll_offset(new_offset);
         }
@@ -307,7 +306,7 @@ impl MemoryEditor {
                             frame_data.set_selected_edit_address(Some(next_address), address_space);
                         } else if !response.has_focus() {
                             // We use has_focus() instead of response.inner.lost_focus() due to the latter
-                            // having a bug where it doesn't detect it lost focus when you scroll.
+                            // having a bug where it doesn't detect if it lost focus when you scroll.
                             frame_data.set_selected_edit_address(None, address_space);
                             read_only = true;
                         }
@@ -330,11 +329,7 @@ impl MemoryEditor {
                             text = text.background_color(ui.style().visuals.code_bg_color);
                         }
 
-                        let label = Label::new(text).sense(Sense::click());
-
-                        // This particular layout is necessary to stop the memory values gradually shifting over to the right
-                        // Presumably due to some floating point error when using left_to_right()
-                        let response = ui.add(label);
+                        let response = Label::new(text).sense(Sense::click()).ui(ui);
 
                         // Right click always selects.
                         if response.secondary_clicked() {
@@ -364,7 +359,7 @@ impl MemoryEditor {
         address_space: &Range<Address>,
     ) {
         let options = &self.options;
-        // Not pretty atm, needs a better method: TODO
+
         ui.horizontal(|ui| {
             ui.add(egui::Separator::default().vertical().spacing(3.0));
             ui.style_mut().spacing.item_spacing.x = 0.0;
@@ -378,6 +373,7 @@ impl MemoryEditor {
                     }
 
                     let mem_val: u8 = read_fn(mem, memory_address).unwrap_or(0);
+                    // Check if its a printable ASCII character
                     let character = if !(32..128).contains(&mem_val) {
                         '.'
                     } else {
@@ -414,13 +410,14 @@ impl MemoryEditor {
     /// Check for arrow keys when we're editing a memory value at an address.
     fn handle_keyboard_edit_input(&mut self, address_range: &Range<Address>, ctx: &Context) {
         use egui::Key::*;
-        if self.frame_data.selected_edit_address.is_none() {
-            return;
-        }
-        // We know it must exist otherwise this function can't be called, so safe to unwrap.
-        let current_address = self.frame_data.selected_edit_address.unwrap();
-        let keys = [ArrowLeft, ArrowRight, ArrowDown, ArrowUp];
-        let key_pressed = keys.iter().find(|&&k| ctx.input().key_pressed(k));
+        const KEYS: [egui::Key; 4] = [ArrowLeft, ArrowRight, ArrowDown, ArrowUp];
+
+        let current_address = match self.frame_data.selected_edit_address {
+            Some(address) => address,
+            None => return,
+        };
+
+        let key_pressed = KEYS.iter().find(|&&k| ctx.input().key_pressed(k));
         if let Some(key) = key_pressed {
             let next_address = match key {
                 ArrowDown => current_address + self.options.column_count,
@@ -438,14 +435,13 @@ impl MemoryEditor {
 
             self.frame_data
                 .set_selected_edit_address(Some(next_address), address_range);
-            // Follow the edit cursor whilst moving with the arrow keys.
-            //self.frame_data.goto_address_line = Some(next_address / self.options.column_count);
         }
     }
 
     // ** Builder methods **
 
     /// Set the window title, only relevant if using the `window_ui()` call.
+    #[must_use]
     pub fn with_window_title(mut self, title: impl Into<String>) -> Self {
         self.window_name = title.into();
         self
@@ -469,6 +465,7 @@ impl MemoryEditor {
     }
 
     /// Set the memory options, useful if you use the `persistence` feature.
+    #[must_use]
     pub fn with_options(mut self, options: MemoryEditorOptions) -> Self {
         self.options = options;
         self
