@@ -17,13 +17,13 @@ default = []
 serde = ["dep:serde", "egui/persistence"]
 
 [dependencies]
-egui = "0.17"
+egui = "0.18"
 
 [dev-dependencies]
-eframe = "0.17"
+eframe = "0.18"
 
 [dependencies.serde]
-version = "^1.0.123"
+version = "1"
 features = ["derive"]
 optional = true
 
