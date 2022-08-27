@@ -1,6 +1,5 @@
 use crate::frame_history::FrameHistory;
-use eframe::epi::Frame;
-use eframe::{epi, NativeOptions};
+use eframe::{Frame, NativeOptions};
 use egui::Context;
 use egui_memory_editor::MemoryEditor;
 
@@ -8,7 +7,11 @@ mod frame_history;
 
 pub fn main() {
     let app = App::default();
-    eframe::run_native(Box::new(app), NativeOptions::default());
+    eframe::run_native(
+        "Mem-Edit Example",
+        NativeOptions::default(),
+        Box::new(|_cc| Box::new(app)),
+    );
 }
 
 pub struct App {
@@ -40,8 +43,8 @@ impl Default for App {
     }
 }
 
-impl epi::App for App {
-    fn update(&mut self, ctx: &Context, frame: &Frame) {
+impl eframe::App for App {
+    fn update(&mut self, ctx: &Context, frame: &mut Frame) {
         create_frame_history(ctx, frame, &mut self.fh);
 
         // This will automatically check for `mem_editor.options.is_open`, so no need to do that here.
@@ -55,10 +58,6 @@ impl epi::App for App {
         );
         // If your memory changes between frames you'll need to re-render at whatever framerate you want.
         ctx.request_repaint();
-    }
-
-    fn name(&self) -> &str {
-        "Mem-edit Example"
     }
 }
 

@@ -28,10 +28,6 @@ impl FrameHistory {
         self.frame_times.average().unwrap_or_default()
     }
 
-    pub fn fps(&self) -> f32 {
-        1.0 / self.frame_times.mean_time_interval().unwrap_or_default()
-    }
-
     pub fn ui(&mut self, ui: &mut egui::Ui) {
         ui.label(format!("Total frames painted: {}", self.frame_times.total_count()))
             .on_hover_text("Includes this frame.");
