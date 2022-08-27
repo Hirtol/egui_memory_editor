@@ -18,14 +18,22 @@ It's best to look at the example in the `examples/` folder, but one can initiali
 For example, a custom memory struct:
 ```rust
 let mut memory = Memory::new();
-// Initialise with read function
-let mut memory_editor = MemoryEditor::<Memory>::new(|memory, address| memory.read_value_at(address))
-    .with_address_range("All", 0..0xFFFF)
-    .with_write_function(|memory, address, value| memory.write_value_at(address, value))
-    .with_window_title("Hello Editor!");
+// Create a memory editor with a variety of ranges, need at least one, but can be as many as you want.
+let mut mem_editor = MemoryEditor::new()
+.with_address_range("All", 0..0xFFFF)
+.with_address_range("IO", 0xFF00..0xFF80)
+.with_window_title("Hello Editor!");
 
-// In your egui rendering simply include the following:
-memory_editor.window_ui(ctx, &mut memory);
+// In your egui rendering simply include the following.
+// The write function is optional, if you don't set it the UI will be in read-only mode.
+let mut is_open = true;
+mem_editor.window_ui(
+    ctx,
+    &mut is_open,
+    &mut memory,
+    |mem, address| mem.read_value(address).into(),
+    |mem, address, val| mem.write_value(address, val),
+);
 ```
 
 ## Running example
