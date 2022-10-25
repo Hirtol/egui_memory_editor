@@ -498,10 +498,18 @@ impl MemoryEditor {
     }
 
     /// Set the memory options, useful if you use the `persistence` feature.
+    #[inline]
     #[must_use]
     pub fn with_options(mut self, options: MemoryEditorOptions) -> Self {
-        self.options = options;
+        self.set_options(options);
         self
+    }
+
+    /// Set the memory options, useful if you use the `persistence` feature.
+    /// 
+    /// See also [`Self::with_options`]
+    pub fn set_options(&mut self, options: MemoryEditorOptions) {
+        self.options = options;
     }
 }
 
