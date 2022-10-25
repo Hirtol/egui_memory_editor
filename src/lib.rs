@@ -479,14 +479,22 @@ impl MemoryEditor {
     /// The first range that is added will be displayed by default when launching the UI.
     ///
     /// The UI will query your set `read_function` with the values within this `Range`
+    #[inline]
     #[must_use]
     pub fn with_address_range(mut self, range_name: impl Into<String>, address_range: Range<Address>) -> Self {
+        self.set_address_range(range_name, address_range);
+        self
+    }
+
+    /// Add or update an address range.
+    /// 
+    /// See also [`Self::with_address_range`]
+    pub fn set_address_range(&mut self, range_name: impl Into<String>, address_range: Range<Address>) {
         self.address_ranges.insert(range_name.into(), address_range);
         self.frame_data.memory_range_combo_box_enabled = self.address_ranges.len() > 1;
         if let Some((name, _)) = self.address_ranges.iter().next() {
             self.options.selected_address_range = name.clone();
         }
-        self
     }
 
     /// Set the memory options, useful if you use the `persistence` feature.
