@@ -487,13 +487,17 @@ impl MemoryEditor {
     }
 
     /// Add or update an address range.
-    /// 
+    ///
     /// See also [`Self::with_address_range`]
     pub fn set_address_range(&mut self, range_name: impl Into<String>, address_range: Range<Address>) {
         self.address_ranges.insert(range_name.into(), address_range);
         self.frame_data.memory_range_combo_box_enabled = self.address_ranges.len() > 1;
-        if let Some((name, _)) = self.address_ranges.iter().next() {
-            self.options.selected_address_range = name.clone();
+
+        // Only update the current selected range if nothing else has been selected to prevent annoying jitter.
+        if self.options.selected_address_range.is_empty() {
+            if let Some((name, _)) = self.address_ranges.iter().next() {
+                self.options.selected_address_range = name.clone();
+            }
         }
     }
 
@@ -506,7 +510,7 @@ impl MemoryEditor {
     }
 
     /// Set the memory options, useful if you use the `persistence` feature.
-    /// 
+    ///
     /// See also [`Self::with_options`]
     pub fn set_options(&mut self, options: MemoryEditorOptions) {
         self.options = options;
