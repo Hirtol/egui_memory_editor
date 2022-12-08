@@ -33,7 +33,7 @@ pub enum DataFormatType {
 impl DataFormatType {
     pub fn iter() -> impl Iterator<Item = DataFormatType> {
         use DataFormatType::*;
-        vec![U8, U16, U32, U64, I8, I16, I32, I64, F32, F64].into_iter()
+        [U8, U16, U32, U64, I8, I16, I32, I64, F32, F64].into_iter()
     }
 
     pub const fn bytes_to_read(&self) -> usize {

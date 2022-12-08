@@ -437,9 +437,8 @@ impl MemoryEditor {
         use egui::Key::*;
         const KEYS: [egui::Key; 4] = [ArrowLeft, ArrowRight, ArrowDown, ArrowUp];
 
-        let current_address = match self.frame_data.selected_edit_address {
-            Some(address) => address,
-            None => return,
+        let Some(current_address) = self.frame_data.selected_edit_address else {
+            return;
         };
 
         let key_pressed = KEYS.iter().find(|&&k| ctx.input().key_pressed(k));
