@@ -78,27 +78,9 @@ impl FrameHistory {
         let color = ui.visuals().text_color();
         let line_stroke = Stroke::new(1.0, color);
 
-        if let Some(pointer_pos) = response.hover_pos() {
-            let y = pointer_pos.y;
-            shapes.push(Shape::line_segment(
-                [pos2(rect.left(), y), pos2(rect.right(), y)],
-                line_stroke,
-            ));
-            let cpu_usage = to_screen.inverse().transform_pos(pointer_pos).y;
-            let text = format!("{:.1} ms", 1e3 * cpu_usage);
-            shapes.push(Shape::text(
-                &*ui.fonts(),
-                pos2(rect.left(), y),
-                egui::Align2::LEFT_BOTTOM,
-                text,
-                TextStyle::Monospace.resolve(ui.style()),
-                color,
-            ));
-        }
-
         let circle_color = color;
         let radius = 2.0;
-        let right_side_time = ui.input().time; // Time at right side of screen
+        let right_side_time = ui.input(|i| i.time); // Time at right side of screen
 
         for (time, cpu_usage) in history.iter() {
             let age = (right_side_time - time) as f32;

@@ -7,7 +7,7 @@ mod frame_history;
 
 pub fn main() {
     let app = App::default();
-    eframe::run_native(
+    let _ = eframe::run_native(
         "Mem-Edit Example",
         NativeOptions::default(),
         Box::new(|_cc| Box::new(app)),
@@ -83,7 +83,7 @@ impl Memory {
 }
 
 fn create_frame_history(ctx: &Context, frame: &Frame, frame_history: &mut FrameHistory) {
-    frame_history.on_new_frame(ctx.input().time, frame.info().cpu_usage);
+    frame_history.on_new_frame(ctx.input(|i| i.time), frame.info().cpu_usage);
     egui::SidePanel::left("SidePanel").show(ctx, |ui| {
         frame_history.ui(ui);
     });

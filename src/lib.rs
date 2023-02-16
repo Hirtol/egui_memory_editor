@@ -441,7 +441,7 @@ impl MemoryEditor {
             return;
         };
 
-        let key_pressed = KEYS.iter().find(|&&k| ctx.input().key_pressed(k));
+        let key_pressed = KEYS.iter().find(|&&k| ctx.input(|i| i.key_pressed(k)));
         if let Some(key) = key_pressed {
             let next_address = match key {
                 ArrowDown => current_address + self.options.column_count,

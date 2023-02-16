@@ -80,12 +80,12 @@ impl MemoryEditor {
 
             // For some reason egui is triggering response.clicked() when we press enter at the moment
             // (didn't used to do this). The additional check for not having enter pressed will need to stay until that is fixed.
-            if response.clicked() && !ui.input().key_pressed(egui::Key::Enter) {
+            if response.clicked() && !ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 self.frame_data.goto_address_string.clear();
             }
 
             // If we pressed enter, move to the address
-            if response.lost_focus() && ui.input().key_pressed(egui::Key::Enter) {
+            if response.lost_focus() && ui.input(|i| i.key_pressed(egui::Key::Enter)) {
                 let goto_address_string = &mut self.frame_data.goto_address_string;
 
                 if goto_address_string.starts_with("0x") || goto_address_string.starts_with("0X") {
