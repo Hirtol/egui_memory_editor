@@ -445,8 +445,8 @@ impl MemoryEditor {
         if let Some(key) = key_pressed {
             let next_address = match key {
                 ArrowDown => current_address + self.options.column_count,
-                ArrowLeft => current_address - 1,
-                ArrowRight => current_address + 1,
+                ArrowLeft => current_address.saturating_sub(1),
+                ArrowRight => current_address.saturating_add(1),
                 ArrowUp => {
                     if current_address < self.options.column_count {
                         0
