@@ -301,7 +301,7 @@ impl MemoryEditor {
                         // For Editing
                         let response = ui.add(
                             TextEdit::singleline(&mut frame_data.selected_edit_address_string)
-                                .desired_width(6.0)
+                                .desired_width(frame_data.previous_frame_text_edit_size)
                                 .font(options.memory_editor_text_style.clone())
                                 .hint_text(label_text)
                                 .id_source(frame_data.selected_edit_address),
@@ -355,6 +355,8 @@ impl MemoryEditor {
                         }
 
                         let response = Label::new(text).sense(Sense::click()).ui(ui);
+                        // For use with the `Edit` widget, keep track of the size of ordinary display to keep column jitter at bay
+                        frame_data.previous_frame_text_edit_size = response.rect.width();
 
                         // Right click always selects.
                         if response.secondary_clicked() {

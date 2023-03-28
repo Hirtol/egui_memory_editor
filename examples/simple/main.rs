@@ -1,7 +1,9 @@
-use crate::frame_history::FrameHistory;
 use eframe::{Frame, NativeOptions};
 use egui::Context;
+
 use egui_memory_editor::MemoryEditor;
+
+use crate::frame_history::FrameHistory;
 
 mod frame_history;
 
@@ -34,6 +36,7 @@ impl Default for App {
 
         // You can set the column count in the UI, but also here. There are a variety of options available in mem_editor.options
         mem_editor.options.column_count = 16;
+
         App {
             mem_editor,
             memory: Default::default(),
@@ -72,6 +75,7 @@ impl Default for Memory {
         }
     }
 }
+
 impl Memory {
     pub fn read_value(&mut self, address: usize) -> u8 {
         self.memory[address]

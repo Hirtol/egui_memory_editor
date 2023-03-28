@@ -132,6 +132,7 @@ impl Default for MemoryEditorOptions {
 pub(crate) struct BetweenFrameData {
     /// Used to ensure we can resize the window in height, but not in width.
     pub previous_frame_editor_width: f32,
+    pub previous_frame_text_edit_size: f32,
     /// The address a user clicked on in the UI in the previous frame, used for DataPreview
     pub selected_edit_address: Option<Address>,
     pub selected_edit_address_string: String,
