@@ -431,7 +431,8 @@ impl MemoryEditor {
     /// Shrink the window to the previous frame's memory viewer's width.
     /// This essentially allows us to only have height resize, and have width grow/shrink as appropriate.
     fn shrink_window_ui(&self, ui: &mut Ui) {
-        ui.set_max_width(ui.min_rect().width().min(self.frame_data.previous_frame_editor_width));
+        // This should take the `min` of ui.min_rect().width() and the frame data width, but that seems to have issues at the moment.
+        ui.set_max_width(self.frame_data.previous_frame_editor_width);
     }
 
     /// Check for arrow keys when we're editing a memory value at an address.
