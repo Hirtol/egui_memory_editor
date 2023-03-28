@@ -1,6 +1,11 @@
 # Egui Memory Editor Changelog
 All notable changes to the `egui_memory_editor` crate will be documented in this file.
 
+## 0.2.3 - 2023-03-28
+
+* Update `egui` to `0.21`
+* Change window size to be shrunk based purely on the previous frame data, and not on `ui.min_rect()`
+
 ## 0.2.2 - 2022-12-08
 
 * Update `egui` to `0.20`
