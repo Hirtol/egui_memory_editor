@@ -203,7 +203,7 @@ impl MemoryEditor {
         let line_height = self.get_line_height(ui);
         let address_space = self.address_ranges.get(&selected_address_range).unwrap().clone();
         // This is janky, but can't think of a better way.
-        let address_characters = format!("{:X}", address_space.end).chars().count();
+        let address_characters = format!("{:X}", address_space.end -1).chars().count();
         let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
         // For when we're editing memory, don't use the `Response` object as that would screw over downward scrolling.
