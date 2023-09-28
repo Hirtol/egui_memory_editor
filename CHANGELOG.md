@@ -1,6 +1,10 @@
 # Egui Memory Editor Changelog
 All notable changes to the `egui_memory_editor` crate will be documented in this file.
 
+## 0.2.6 - 2023-09-28
+
+* Update `egui` to `0.23`
+
 ## 0.2.5 - 2023-07-31
 
 * Avoid showing an extra digit for addresses ([#10](https://github.com/Hirtol/egui_memory_editor/pull/10))
