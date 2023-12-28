@@ -1,6 +1,6 @@
 [package]
 name = "egui_memory_editor"
-version = "0.2.6"
+version = "0.2.7"
 authors = ["Hirtol <rust@hirtol.top>"]
 edition = "2021"
 description = "A simple memory editor for the egui library"
@@ -17,10 +17,10 @@ default = []
 serde = ["dep:serde", "egui/persistence"]
 
 [dependencies]
-egui = "0.23"
+egui = "0.24"
 
 [dev-dependencies]
-eframe = "0.23"
+eframe = "0.24"
 
 [dependencies.serde]
 version = "1"

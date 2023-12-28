@@ -1,6 +1,10 @@
 # Egui Memory Editor Changelog
 All notable changes to the `egui_memory_editor` crate will be documented in this file.
 
+## 0.2.7 - 2023-12-28
+
+* Update `egui` to `0.24`
+
 ## 0.2.6 - 2023-09-28
 
 * Update `egui` to `0.23`
