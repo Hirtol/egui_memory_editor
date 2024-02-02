@@ -1,6 +1,11 @@
 # Egui Memory Editor Changelog
 All notable changes to the `egui_memory_editor` crate will be documented in this file.
 
+## 0.2.8 - 2024-02-02
+
+* Update `egui` to `0.25`
+* Allow the goto-address box to take up a little more space
+
 ## 0.2.7 - 2023-12-28
 
 * Update `egui` to `0.24`

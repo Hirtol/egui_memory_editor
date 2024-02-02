@@ -67,7 +67,10 @@ impl MemoryEditor {
 
             // Goto address
             let response = ui
-                .add(egui::TextEdit::singleline(&mut self.frame_data.goto_address_string).hint_text("0000"))
+                .add_sized(
+                    ui.available_size(),
+                    egui::TextEdit::singleline(&mut self.frame_data.goto_address_string).hint_text("0000"),
+                )
                 .on_hover_text(
                     "Goto an address, format: \n\
                     * An address like `0xAA` can be written as `AA`\n\
