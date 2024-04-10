@@ -81,7 +81,7 @@ impl MemoryEditor {
     /// * `mem` - The memory from which to read.
     /// * `read_fn` - Any closure which takes in a reference to the memory and an address and returns a `u8` value. It can
     /// return `None` if the data at the specified address is not available for whatever reason. This will then be rendered
-    /// as `--`
+    /// as `--` (See [`MemoryEditorOptions::none_display_value`])
     pub fn window_ui_read_only<T: ?Sized>(
         &mut self,
         ctx: &Context,
@@ -106,7 +106,7 @@ impl MemoryEditor {
     /// * `mem` - The memory from which to read.
     /// * `read_fn` - Any closure which takes in a reference to the memory and an address and returns a `u8` value. It can
     /// return `None` if the data at the specified address is not available for whatever reason. This will then be rendered
-    /// as `--`
+    /// as `--` (See [`MemoryEditorOptions::none_display_value`])
     /// * `write_fn` - Any closure which can take a reference to the memory, an address, and the value to write.
     pub fn window_ui<T: ?Sized>(
         &mut self,
@@ -254,7 +254,7 @@ impl MemoryEditor {
                     }
                 });
             // After we've drawn the area we want to resize to we want to save this size for the next frame.
-            // In case it has became smaller we'll shrink the window.
+            // In case it has become smaller we'll shrink the window.
             self.frame_data.previous_frame_editor_width = ui.min_rect().width();
         });
     }
@@ -401,7 +401,7 @@ impl MemoryEditor {
                     }
 
                     let mem_val: u8 = read_fn(mem, memory_address).unwrap_or(0);
-                    // Check if its a printable ASCII character
+                    // Check if it's a printable ASCII character
                     let character = if !(32..128).contains(&mem_val) {
                         '.'
                     } else {
