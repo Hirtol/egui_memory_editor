@@ -1,5 +1,11 @@
 # Egui Memory Editor Changelog
+
 All notable changes to the `egui_memory_editor` crate will be documented in this file.
+
+## 0.2.9 - 2024-04-10
+
+* Update `egui` to `0.27`
+* Fix jitter when editing memory cells
 
 ## 0.2.8 - 2024-02-02
 
@@ -33,7 +39,8 @@ All notable changes to the `egui_memory_editor` crate will be documented in this
 
 ## 0.2.1 - 2022-10-25
 
-* Add the ability to update/set a memory range after `MemoryEditor` creation ([#6](https://github.com/Hirtol/egui_memory_editor/pull/6)).
+* Add the ability to update/set a memory range after `MemoryEditor`
+  creation ([#6](https://github.com/Hirtol/egui_memory_editor/pull/6)).
 
 ## 0.2.0 - 2022-08-27
 
