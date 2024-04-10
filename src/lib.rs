@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Context, Label, RichText, ScrollArea, Sense, TextEdit, Ui, Vec2, Widget, Window};
+use egui::{Context, Label, Margin, RichText, ScrollArea, Sense, TextEdit, Ui, Vec2, Widget, Window};
 
 use crate::option_data::{BetweenFrameData, MemoryEditorOptions};
 
@@ -203,7 +203,7 @@ impl MemoryEditor {
         let line_height = self.get_line_height(ui);
         let address_space = self.address_ranges.get(&selected_address_range).unwrap().clone();
         // This is janky, but can't think of a better way.
-        let address_characters = format!("{:X}", address_space.end -1).chars().count();
+        let address_characters = format!("{:X}", address_space.end - 1).chars().count();
         let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
 
         // For when we're editing memory, don't use the `Response` object as that would screw over downward scrolling.
@@ -302,6 +302,7 @@ impl MemoryEditor {
                         let response = ui.add(
                             TextEdit::singleline(&mut frame_data.selected_edit_address_string)
                                 .desired_width(frame_data.previous_frame_text_edit_size)
+                                .margin(Margin::symmetric(0., 0.))
                                 .font(options.memory_editor_text_style.clone())
                                 .hint_text(label_text)
                                 .id_source(frame_data.selected_edit_address),
