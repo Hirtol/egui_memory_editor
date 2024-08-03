@@ -1,5 +1,4 @@
 use crate::option_data::{DataFormatType, DataPreviewOptions, Endianness};
-use std::convert::TryInto;
 
 /// Turn a provided slice into a decimal [`String`] representing it's value, interpretation is based on the provided
 /// [`crate::option_data::DataPreviewOptions`].

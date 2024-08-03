@@ -55,7 +55,7 @@ impl MemoryEditor {
             if self.options.is_resizable_column {
                 ui.add(
                     egui::DragValue::new(&mut columns_u8)
-                        .clamp_range(1.0..=64.0)
+                        .range(1.0..=64.0)
                         .prefix("Columns: ")
                         .speed(0.5),
                 );

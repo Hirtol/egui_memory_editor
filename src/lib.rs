@@ -7,7 +7,7 @@
 use std::collections::BTreeMap;
 use std::ops::Range;
 
-use egui::{Context, Label, Margin, RichText, ScrollArea, Sense, TextEdit, Ui, Vec2, Widget, Window};
+use egui::{Context, Label, Margin, RichText, ScrollArea, Sense, TextEdit, TextWrapMode, Ui, Vec2, Widget, Window};
 
 use crate::option_data::{BetweenFrameData, MemoryEditorOptions};
 
@@ -230,7 +230,7 @@ impl MemoryEditor {
                 .striped(true)
                 .spacing(Vec2::new(15.0, ui.style().spacing.item_spacing.y))
                 .show(ui, |ui| {
-                    ui.style_mut().wrap = Some(false);
+                    ui.style_mut().wrap_mode = Some(TextWrapMode::Extend);
                     ui.style_mut().spacing.item_spacing.x = 3.0;
 
                     for start_row in line_range.clone() {

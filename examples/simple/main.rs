@@ -12,7 +12,7 @@ pub fn main() {
     let _ = eframe::run_native(
         "Mem-Edit Example",
         NativeOptions::default(),
-        Box::new(|_cc| Box::new(app)),
+        Box::new(|_cc| Ok(Box::new(app))),
     );
 }
 
