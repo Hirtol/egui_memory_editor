@@ -210,7 +210,7 @@ impl MemoryEditor {
         self.handle_keyboard_edit_input(&address_space, ui.ctx());
 
         let mut scroll = ScrollArea::vertical()
-            .id_source(selected_address_range)
+            .id_salt(selected_address_range)
             .max_height(f32::INFINITY)
             .auto_shrink([false, true]);
 
