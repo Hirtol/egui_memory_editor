@@ -2,6 +2,10 @@
 
 All notable changes to the `egui_memory_editor` crate will be documented in this file.
 
+## 0.2.11 - 2025-01-17
+
+* Update `egui` to `0.30`
+
 ## 0.2.10 - 2024-04-10
 
 * Update `egui` to `0.28`
