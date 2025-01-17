@@ -39,7 +39,7 @@ impl MemoryEditor {
                 ui.horizontal(|ui| {
                     ui.label("Region:");
 
-                    egui::ComboBox::from_id_source("RegionCombo")
+                    egui::ComboBox::from_id_salt("RegionCombo")
                         .selected_text(selected_address_range.clone())
                         .show_ui(ui, |ui| {
                             address_ranges.iter().for_each(|(range_name, _)| {
