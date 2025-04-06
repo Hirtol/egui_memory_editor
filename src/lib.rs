@@ -302,7 +302,7 @@ impl MemoryEditor {
                         let response = ui.add(
                             TextEdit::singleline(&mut frame_data.selected_edit_address_string)
                                 .desired_width(frame_data.previous_frame_text_edit_size)
-                                .margin(Margin::symmetric(0., 0.))
+                                .margin(Margin::symmetric(0, 0))
                                 .font(options.memory_editor_text_style.clone())
                                 .hint_text(label_text)
                                 .id_source(frame_data.selected_edit_address),
