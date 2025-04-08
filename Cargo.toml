@@ -1,8 +1,8 @@
 [package]
 name = "egui_memory_editor"
-version = "0.2.11"
+version = "0.2.12"
 authors = ["Hirtol <rust@hirtol.top>"]
-edition = "2021"
+edition = "2024"
 description = "A simple memory editor for the egui library"
 readme = "README.md"
 homepage = "https://github.com/Hirtol/egui_memory_editor"

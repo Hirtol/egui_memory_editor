@@ -80,8 +80,8 @@ impl MemoryEditor {
     /// * `ctx` - The `egui` context.
     /// * `mem` - The memory from which to read.
     /// * `read_fn` - Any closure which takes in a reference to the memory and an address and returns a `u8` value. It can
-    /// return `None` if the data at the specified address is not available for whatever reason. This will then be rendered
-    /// as `--` (See [`MemoryEditorOptions::none_display_value`])
+    ///   return `None` if the data at the specified address is not available for whatever reason. This will then be rendered
+    ///   as `--` (See [`MemoryEditorOptions::none_display_value`])
     pub fn window_ui_read_only<T: ?Sized>(
         &mut self,
         ctx: &Context,
@@ -105,8 +105,8 @@ impl MemoryEditor {
     /// * `ctx` - The `egui` context.
     /// * `mem` - The memory from which to read.
     /// * `read_fn` - Any closure which takes in a reference to the memory and an address and returns a `u8` value. It can
-    /// return `None` if the data at the specified address is not available for whatever reason. This will then be rendered
-    /// as `--` (See [`MemoryEditorOptions::none_display_value`])
+    ///   return `None` if the data at the specified address is not available for whatever reason. This will then be rendered
+    ///   as `--` (See [`MemoryEditorOptions::none_display_value`])
     /// * `write_fn` - Any closure which can take a reference to the memory, an address, and the value to write.
     pub fn window_ui<T: ?Sized>(
         &mut self,
@@ -202,9 +202,9 @@ impl MemoryEditor {
 
         let line_height = self.get_line_height(ui);
         let address_space = self.address_ranges.get(&selected_address_range).unwrap().clone();
-        // This is janky, but can't think of a better way.
-        let address_characters = format!("{:X}", address_space.end - 1).chars().count();
-        let max_lines = (address_space.len() + column_count - 1) / column_count; // div_ceil
+        // Calculate how many hex characters we need for a consistent display of the addresses in the left column
+        let address_characters = address_space.end.next_power_of_two().ilog2() as usize / 4;
+        let max_lines = address_space.len().div_ceil(column_count);
 
         // For when we're editing memory, don't use the `Response` object as that would screw over downward scrolling.
         self.handle_keyboard_edit_input(&address_space, ui.ctx());
@@ -273,7 +273,7 @@ impl MemoryEditor {
         let mut read_only = frame_data.selected_edit_address.is_none() || write_fn.is_none();
 
         // div_ceil
-        for grid_column in 0..(options.column_count + 7) / 8 {
+        for grid_column in 0..options.column_count.div_ceil(8) {
             let start_address = start_address + 8 * grid_column;
 
             // Each grid column is 8 bytes, where each byte is one 'sub-column'.

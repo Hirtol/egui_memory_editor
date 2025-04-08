@@ -175,13 +175,13 @@ impl BetweenFrameData {
 
     #[inline]
     pub fn should_highlight(&self, address: Address) -> bool {
-        self.selected_highlight_address.map_or(false, |addr| addr == address)
-            || self.selected_edit_address.map_or(false, |addr| addr == address)
+        (self.selected_highlight_address == Some(address))
+            || (self.selected_edit_address == Some(address))
     }
 
     pub fn should_subtle_highlight(&self, address: Address, data_format: DataFormatType) -> bool {
         self.show_additional_highlights
-            && self.selected_highlight_address.map_or(false, |addr| {
+            && self.selected_highlight_address.is_some_and(|addr| {
                 (addr..addr + data_format.bytes_to_read()).contains(&address)
             })
     }
