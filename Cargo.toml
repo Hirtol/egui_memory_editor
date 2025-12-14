@@ -17,10 +17,10 @@ default = []
 serde = ["dep:serde", "egui/persistence"]
 
 [dependencies]
-egui = { version = "0.32", default-features = false }
+egui = { version = "0.33", default-features = false }
 
 [dev-dependencies]
-eframe = "0.32"
+eframe = "0.33"
 
 [dependencies.serde]
 version = "1"
