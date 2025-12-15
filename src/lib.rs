@@ -323,10 +323,10 @@ impl MemoryEditor {
                             let next_address = memory_address + 1;
                             let new_value = u8::from_str_radix(&frame_data.selected_edit_address_string[0..2], 16);
 
-                            if let Ok(value) = new_value {
-                                if let Some(write_fns) = write_fn.as_mut() {
-                                    write_fns(mem, memory_address, value);
-                                }
+                            if let Ok(value) = new_value
+                                && let Some(write_fns) = write_fn.as_mut()
+                            {
+                                write_fns(mem, memory_address, value);
                             }
 
                             frame_data.set_selected_edit_address(Some(next_address), address_space);
@@ -451,13 +451,7 @@ impl MemoryEditor {
                 ArrowDown => current_address + self.options.column_count,
                 ArrowLeft => current_address.saturating_sub(1),
                 ArrowRight => current_address.saturating_add(1),
-                ArrowUp => {
-                    if current_address < self.options.column_count {
-                        0
-                    } else {
-                        current_address - self.options.column_count
-                    }
-                }
+                ArrowUp => current_address.saturating_sub(self.options.column_count),
                 _ => unreachable!(),
             };
 
@@ -497,10 +491,10 @@ impl MemoryEditor {
         self.frame_data.memory_range_combo_box_enabled = self.address_ranges.len() > 1;
 
         // Only update the current selected range if nothing else has been selected to prevent annoying jitter.
-        if self.options.selected_address_range.is_empty() {
-            if let Some((name, _)) = self.address_ranges.iter().next() {
-                self.options.selected_address_range = name.clone();
-            }
+        if self.options.selected_address_range.is_empty()
+            && let Some((name, _)) = self.address_ranges.iter().next()
+        {
+            self.options.selected_address_range = name.clone();
         }
     }
 
